@@ -7,19 +7,66 @@ import os
 st.set_page_config(page_title="Ranking & Estatísticas da Equipe", page_icon="🏆", layout="wide")
 
 ARQUIVO_DADOS = "pontuacoes_equipe.csv"
+ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
 
-# Função para carregar os dados
+# Cores padrão para os integrantes iniciais
+CORES_PADRAO = {
+    "Benedito": "#1E3A8A",      # Azul Escuro
+    "Bárbara": "#DB2777",      # Rosa / Magenta
+    "Vinícius": "#059669",     # Verde Esmeralda
+    "Samuel": "#D97706"        # Laranja / Âmbar
+}
+
+# Cores extras para novos cadastros
+CORES_EXTRAS = ["#7C3AED", "#DC2626", "#0284C7", "#4F46E5", "#0D9488", "#CA8A04"]
+
+def carregar_integrantes():
+    if os.path.exists(ARQUIVO_INTEGRANTES):
+        df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
+        return dict(zip(df_int["Nome"], df_int["Cor"]))
+    else:
+        # Salva a lista inicial padrão
+        df_int = pd.DataFrame(list(CORES_PADRAO.items()), columns=["Nome", "Cor"])
+        df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
+        return CORES_PADRAO
+
+def salvar_integrante(nome, cor):
+    df_int = pd.DataFrame(list(carregar_integrantes().items()), columns=["Nome", "Cor"])
+    if nome not in df_int["Nome"].values:
+        nova_linha = pd.DataFrame([{"Nome": nome, "Cor": cor}])
+        df_int = pd.concat([df_int, nova_linha], ignore_index=True)
+        df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
+
 def carregar_dados():
     if os.path.exists(ARQUIVO_DADOS):
         return pd.read_csv(ARQUIVO_DADOS)
     else:
         return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
 
+integrantes_cores = carregar_integrantes()
 df_pontos = carregar_dados()
 
 st.title("🏆 Ranking & Estatísticas de Desempenho da Equipe")
-st.markdown("Insira sua pontuação diária para atualizar os cálculos e o ranking em tempo real!")
+st.markdown("Insira sua pontuação diária (máximo de 25 pontos) para atualizar o ranking em tempo real!")
 st.markdown("---")
+
+# --- CADASTRO DE NOVO INTEGRANTE ---
+with st.expander("➕ Cadastrar Novo Integrante"):
+    with st.form("form_novo_integrante", clear_on_submit=True):
+        novo_nome = st.text_input("Nome do Integrante:")
+        nova_cor = st.color_picker("Escolha a Cor de Destaque:", "#2563EB")
+        cadastrar_btn = st.form_submit_button("Salvar Integrante")
+        
+        if cadastrar_btn:
+            if novo_nome.strip():
+                if novo_nome.strip() in integrantes_cores:
+                    st.warning("Este integrante já está cadastrado!")
+                else:
+                    salvar_integrante(novo_nome.strip(), nova_cor)
+                    st.success(f"Integrante {novo_nome.strip()} cadastrado com sucesso!")
+                    st.rerun()
+            else:
+                st.warning("Digite um nome válido.")
 
 # --- FORMULÁRIO DE LANÇAMENTO ---
 with st.container():
@@ -28,28 +75,26 @@ with st.container():
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            integrantes_padrao = ["Carolina Rodrigues Bruno", "Saruete Stabile", "Benedito", "Outro"]
-            integrante = st.selectbox("Selecione o Integrante:", integrantes_padrao)
-            if integrante == "Outro":
-                integrante = st.text_input("Digite o nome do Integrante:")
+            lista_nomes = list(carregar_integrantes().keys())
+            integrante = st.selectbox("Selecione o Integrante:", lista_nomes)
 
         with col2:
             data_lancamento = st.date_input("Data da Pontuação:", value=datetime.today())
             
         with col3:
-            pontos = st.number_input("Pontos / Meta Realizada:", min_value=0.0, step=1.0, format="%.1f")
+            pontos = st.number_input("Pontos do Dia (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
 
         observacao = st.text_input("Observação / Comentário (Opcional):")
         enviado = st.form_submit_button("🚀 Salvar Pontuação")
 
         if enviado:
             if not integrante:
-                st.warning("Por favor, informe o nome do integrante.")
+                st.warning("Por favor, selecione o integrante.")
             else:
                 nova_linha = pd.DataFrame([{
                     "Data": data_lancamento.strftime("%Y-%m-%d"),
                     "Integrante": integrante,
-                    "Pontos": pontos,
+                    "Pontos": int(pontos),
                     "Observação": observacao if observacao else ""
                 }])
                 
@@ -64,22 +109,19 @@ st.markdown("---")
 if not df_pontos.empty:
     st.subheader("📊 Painel de Estatísticas da Equipe")
 
-    # Cálculos estatísticos
     total_pontos_geral = df_pontos["Pontos"].sum()
     media_geral = df_pontos["Pontos"].mean()
     total_lancamentos = len(df_pontos)
     maior_pontuacao_dia = df_pontos["Pontos"].max()
 
-    # Cards de Métricas no Topo
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Acumulado (Equipe)", f"{total_pontos_geral:.1f} pts")
+    c1.metric("Total Acumulado (Equipe)", f"{int(total_pontos_geral)} pts")
     c2.metric("Média por Lançamento", f"{media_geral:.1f} pts")
     c3.metric("Total de Registros", f"{total_lancamentos}")
-    c4.metric("Recorde Diário (Individual)", f"{maior_pontuacao_dia:.1f} pts")
+    c4.metric("Recorde Diário", f"{int(maior_pontuacao_dia)} pts")
 
     st.markdown("---")
 
-    # Agrupamentos para o Ranking
     ranking_geral = df_pontos.groupby("Integrante").agg(
         Total_Pontos=("Pontos", "sum"),
         Media_Diaria=("Pontos", "mean"),
@@ -101,19 +143,16 @@ if not df_pontos.empty:
             "Media_Diaria": "Média (Pts/Dia)",
             "Dias_Trabalhados": "Lançamentos"
         })
-        st.dataframe(tabela_exibic, use_container_width=True) if 'tabela_exibic' in locals() else st.dataframe(tabela_exibrio := tabela_exib, use_container_width=True)
+        st.dataframe(tabela_exib, use_container_width=True)
 
     with col_b:
         st.markdown("### 📈 Comparativo de Pontuação Acumulada")
         st.bar_chart(ranking_geral.set_index("Integrante")["Total_Pontos"])
 
     st.markdown("---")
-    
-    # Histórico detalhado
     st.subheader("📋 Histórico Completo de Lançamentos")
     st.dataframe(df_pontos.sort_values(by="Data", ascending=False), use_container_width=True)
     
-    # Botão de download
     csv = df_pontos.to_csv(index=False).encode('utf-8-sig')
     st.download_button("📥 Baixar Histórico Completo em CSV", data=csv, file_name="historico_pontuacoes.csv", mime="text/csv")
 
