@@ -21,7 +21,7 @@ PATENTES_ORIGINAIS = {
     0: "🎒 Mochila de Criança"
 }
 
-# --- CONFIGURAÇÃO DOS TEMAS COM FRASES ESPECÍFICAS ---
+# --- CONFIGURAÇÃO DOS TEMAS COM CORES E ESTILOS CORRIGIDOS ---
 TEMAS = {
     "💀 Cemitério Gótico": {
         "bg_app": "#09090B",
@@ -29,6 +29,8 @@ TEMAS = {
         "border_color": "#4C1D95",
         "text_color": "#E4E4E7",
         "accent_color": "#A855F7",
+        "input_bg": "#18181B",
+        "input_text": "#FFFFFF",
         "icone": "💀",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
@@ -43,6 +45,8 @@ TEMAS = {
         "border_color": "#F472B6",
         "text_color": "#831843",
         "accent_color": "#DB2777",
+        "input_bg": "#FFFFFF",
+        "input_text": "#831843",
         "icone": "👰",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
@@ -57,6 +61,8 @@ TEMAS = {
         "border_color": "#FB7185",
         "text_color": "#4C0519",
         "accent_color": "#E11D48",
+        "input_bg": "#FFFFFF",
+        "input_text": "#4C0519",
         "icone": "💖",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
@@ -71,6 +77,8 @@ TEMAS = {
         "border_color": "#06B6D4",
         "text_color": "#E2E8F0",
         "accent_color": "#22D3EE",
+        "input_bg": "#0F172A",
+        "input_text": "#FFFFFF",
         "icone": "💻",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
@@ -85,8 +93,10 @@ TEMAS = {
         "border_color": "#CBD5E1",
         "text_color": "#1E293B",
         "accent_color": "#2563EB",
+        "input_bg": "#FFFFFF",
+        "input_text": "#1E293B",
         "icone": "☕",
-        "patentes": PATENTES_ORIGINAIS,
+        "patentes": {100: "👑 Deus Supremo", 75: "🐐 Cabrito Sagrado", 50: "🐎 Égua Satânica", 25: "🐴 Mula Juvenil", 0: "🎒 Mochila de Criança"},
         "mensagens": [
             "Reunião que podia ser um e-mail? Aqui o foco é produtividade real!",
             "O café quentinho está na xícara e a planilha aberta para começar o dia.",
@@ -104,7 +114,7 @@ st.sidebar.markdown("---")
 st.sidebar.title("⚙️ Exibição")
 ocultar_boas_vindas = st.sidebar.checkbox("Ocultar mensagem de boas-vindas", value=False)
 
-# --- APLICAR CSS DINÂMICO CONFORME O TEMA ---
+# --- APLICAR CSS CORRIGIDO PARA EVITAR TEXTO INVISÍVEL ---
 st.markdown(f"""
     <style>
     .stApp {{
@@ -119,6 +129,16 @@ st.markdown(f"""
         color: {t["text_color"]};
         margin-bottom: 15px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+    }}
+    /* Corrigir rótulos (labels) dos inputs para ficarem sempre legíveis */
+    .stTextInput label, .stSelectbox label, .stDateInput label, .stNumberInput label {{
+        color: {t["text_color"]} !important;
+        font-weight: 600;
+    }}
+    /* Cores das caixas de texto e inputs */
+    input, select, textarea {{
+        background-color: {t["input_bg"]} !important;
+        color: {t["input_text"]} !important;
     }}
     @media (max-width: 768px) {{
         h1 {{ font-size: 22px !important; }}
@@ -187,7 +207,7 @@ if not ocultar_boas_vindas:
         f"""
         <div class="custom-card">
             <h3 style="margin: 0; color: {t["accent_color"]};">{t["icone"]} Painel Interativo - {tema_escolhido}</h3>
-            <p style="font-size: 13px; opacity: 0.7; margin-top: 2px;">📅 Data: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
+            <p style="font-size: 13px; opacity: 0.8; margin-top: 2px;">📅 Data: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
             <hr style="border: 0.5px solid {t["border_color"]}; margin: 8px 0;">
             <p style="font-size: 14px; margin: 0; font-style: italic;">"{mensagem_dia}"</p>
         </div>
