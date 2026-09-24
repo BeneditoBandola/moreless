@@ -96,7 +96,7 @@ TEMAS = {
         "input_bg": "#FFFFFF",
         "input_text": "#1E293B",
         "icone": "☕",
-        "patentes": {100: "👑 Deus Supremo", 75: "🐐 Cabrito Sagrado", 50: "🐎 Égua Satânica", 25: "🐴 Mula Juvenil", 0: "🎒 Mochila de Criança"},
+        "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Reunião que podia ser um e-mail? Aqui o foco é produtividade real!",
             "O café quentinho está na xícara e a planilha aberta para começar o dia.",
@@ -130,12 +130,10 @@ st.markdown(f"""
         margin-bottom: 15px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
     }}
-    /* Corrigir rótulos (labels) dos inputs para ficarem sempre legíveis */
     .stTextInput label, .stSelectbox label, .stDateInput label, .stNumberInput label {{
         color: {t["text_color"]} !important;
         font-weight: 600;
     }}
-    /* Cores das caixas de texto e inputs */
     input, select, textarea {{
         background-color: {t["input_bg"]} !important;
         color: {t["input_text"]} !important;
@@ -148,12 +146,14 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+# Cores padrão incluindo a Tuane e a Gabrielle
 CORES_PADRAO = {
     "Benedito": "#2563EB",
     "Bárbara": "#DB2777",
     "Vinícius": "#059669",
     "Samuel": "#D97706",
-    "Gabrielle": "#8B5CF6"
+    "Gabrielle": "#8B5CF6",
+    "Tuane": "#0891B2"  # Azul-petróleo elegante
 }
 
 def carregar_integrantes():
