@@ -109,7 +109,7 @@ st.sidebar.markdown("---")
 st.sidebar.title("⚙️ Exibição")
 ocultar_boas_vindas = st.sidebar.checkbox("Ocultar mensagem de boas-vindas", value=False)
 
-# --- APLICAR CSS DINÂMICO CONFORME O TEMA ---
+# --- APLICAR CSS DINÂMICO CONFORME O TEMA (Chaves duplicadas para evitar conflito com f-string) ---
 st.markdown(f"""
     <style>
     .stApp {{
@@ -124,7 +124,7 @@ st.markdown(f"""
         color: {t["text_color"]};
         margin-bottom: 15px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
-    }
+    }}
     @media (max-width: 768px) {{
         h1 {{ font-size: 22px !important; }}
         h2 {{ font-size: 18px !important; }}
@@ -256,7 +256,6 @@ with aba_ranking:
         
         ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(lambda x: obter_classificacao(x, t["patentes"]))
 
-        # Formatar a data no histórico geral se necessário
         df_exibicao = df_pontos.copy()
         df_exibicao['Data'] = pd.to_datetime(df_exibicao['Data']).dt.strftime('%d/%m/%Y')
 
