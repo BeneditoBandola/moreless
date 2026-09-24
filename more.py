@@ -23,7 +23,7 @@ PATENTES_ORIGINAIS = {
 
 # --- CONFIGURAÇÃO DOS TEMAS COM CORES E ESTILOS CORRIGIDOS ---
 TEMAS = {
-    "💀 Cemitério Gótico": {
+    "💀 Cemitério": {
         "bg_app": "#09090B",
         "card_bg": "linear-gradient(135deg, #120A2A, #09090B)",
         "border_color": "#4C1D95",
@@ -51,8 +51,8 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fechamento da planilha nos una para sempre no altar!",
-            "Um casamento perfeito exige buquê lindo, convidados felizes e metas batidas."
+            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
+            "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas."
         ]
     },
     "💖 Meninas e Estilo": {
@@ -82,9 +82,9 @@ TEMAS = {
         "icone": "💻",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            "Executando rotina de otimização de dados... 100% de eficiência concluída.",
+            "A executar rotina de otimização de dados... 100% de eficiência concluída.",
             "O código está limpo, o deploy foi feito com sucesso e o sistema voa.",
-            "Conectado na matrix corporativa, processando cada desafio com inovação."
+            "Conectado na matrix corporativa, a processar cada desafio com inovação."
         ]
     },
     "☕ Escritório Corporativo": {
@@ -99,7 +99,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Reunião que podia ser um e-mail? Aqui o foco é produtividade real!",
-            "O café quentinho está na xícara e a planilha aberta para começar o dia.",
+            "O café quentinho está na chávena e a folha de cálculo aberta para começar o dia.",
             "Organização, networking e foco nas entregas definem o sucesso de hoje."
         ]
     }
@@ -146,14 +146,14 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Cores padrão incluindo a Tuane e a Gabrielle
+# Cores padrão incluindo a Tuane, Gabrielle, etc.
 CORES_PADRAO = {
     "Benedito": "#2563EB",
     "Bárbara": "#DB2777",
     "Vinícius": "#059669",
     "Samuel": "#D97706",
     "Gabrielle": "#8B5CF6",
-    "Tuane": "#0891B2"  # Azul-petróleo elegante
+    "Tuane": "#0891B2"
 }
 
 def carregar_integrantes():
@@ -286,7 +286,7 @@ with aba_ranking:
         st.subheader("📋 Livro de Registros Recentes")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False), use_container_width=True)
     else:
-        st.info("Nenhum registro encontrado ainda.")
+        st.info("Nenhum registo encontrado ainda.")
 
 with aba_admin:
     st.subheader("➕ Adicionar Novo Integrante")
