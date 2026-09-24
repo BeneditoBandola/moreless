@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Ranking & Estatísticas da Equipe", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="Ranking & Campeão da Semana", page_icon="🏆", layout="wide")
 
 ARQUIVO_DADOS = "pontuacoes_equipe.csv"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
@@ -17,15 +17,11 @@ CORES_PADRAO = {
     "Samuel": "#D97706"        # Laranja / Âmbar
 }
 
-# Cores extras para novos cadastros
-CORES_EXTRAS = ["#7C3AED", "#DC2626", "#0284C7", "#4F46E5", "#0D9488", "#CA8A04"]
-
 def carregar_integrantes():
     if os.path.exists(ARQUIVO_INTEGRANTES):
         df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
         return dict(zip(df_int["Nome"], df_int["Cor"]))
     else:
-        # Salva a lista inicial padrão
         df_int = pd.DataFrame(list(CORES_PADRAO.items()), columns=["Nome", "Cor"])
         df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
         return CORES_PADRAO
@@ -46,8 +42,48 @@ def carregar_dados():
 integrantes_cores = carregar_integrantes()
 df_pontos = carregar_dados()
 
-st.title("🏆 Ranking & Estatísticas de Desempenho da Equipe")
-st.markdown("Insira sua pontuação diária (máximo de 25 pontos) para atualizar o ranking em tempo real!")
+st.title("🏆 Ranking & Apuração do Campeão da Semana")
+st.markdown("Registre sua pontuação diária (máximo de 25 pontos) e descubra quem é o campeão da semana!")
+st.markdown("---")
+
+# --- BOTÃO DE VERIFICAR CLASSIFICAÇÃO / CAMPEÃO DA SEMANA ---
+if st.button("🎉 VERIFICAR CLASSIFICAÇÃO & CAMPEÃO DA SEMANA!", use_container_width=True):
+    if df_pontos.empty:
+        st.warning("Ainda não há pontuações cadastradas para apurar o campeão!")
+    else:
+        df_pontos['Data_Parsed'] = pd.to_datetime(df_pontos['Data'], errors='coerce')
+        hoje = pd.to_datetime(datetime.today().date())
+        inicio_semana = hoje - timedelta(days=7)
+        
+        # Filtrar dados dos últimos 7 dias
+        df_semana = df_pontos[df_pontos['Data_Parsed'] >= inicio_semana]
+        
+        if df_semana.empty:
+            st.info("Nenhum lançamento registrado nos últimos 7 dias. Mostrando campeão do histórico geral:")
+            df_semana = df_pontos.copy()
+            
+        ranking_semana = df_semana.groupby("Integrante")["Pontos"].sum().reset_index()
+        ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
+        
+        campeao = ranking_semana.iloc[0]["Integrante"]
+        pontos_campeao = ranking_semana.iloc[0]["Pontos"]
+        cor_campeao = integrantes_cores.get(campeao, "#2563EB")
+        
+        # --- QUADRO ALEGRE DE PREMIAÇÃO ---
+        st.balloons()
+        st.markdown(
+            f"""
+            <div style="background: linear-gradient(135deg, {cor_campeao}, #F59E0B); padding: 30px; border-radius: 15px; text-align: center; color: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
+                <h1 style="margin: 0; font-size: 40px;">👑 CAMPEÃO(A) DA SEMANA! 👑</h1>
+                <h2 style="margin: 10px 0; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">{campeao}</h2>
+                <p style="font-size: 20px; margin: 0;">Com uma pontuação espetacular de <b>{int(pontos_campeao)} pontos</b> nos últimos 7 dias!</p>
+                <h3 style="margin-top: 15px; font-style: italic;">Parabéns pelo excelente desempenho e dedicação! 🚀🌟</h3>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+
 st.markdown("---")
 
 # --- CADASTRO DE NOVO INTEGRANTE ---
