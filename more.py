@@ -146,7 +146,6 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Cores padrão incluindo a Tuane, Gabrielle, etc.
 CORES_PADRAO = {
     "Benedito": "#2563EB",
     "Bárbara": "#DB2777",
@@ -226,7 +225,10 @@ with aba_lancamento:
     with st.form("form_pontuacao", clear_on_submit=True):
         lista_nomes = list(carregar_integrantes().keys())
         integrante = st.selectbox("Escolha o Integrante:", lista_nomes)
-        data_lancamento = st.date_input("Data:", value=datetime.today())
+        
+        # Formatando o seletor de data para o padrão brasileiro (DD/MM/AAAA)
+        data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
+        
         pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
         observacao = st.text_input("Observação (Opcional):")
         enviado = st.form_submit_button("🔥 Registrar Pontuação", use_container_width=True)
@@ -271,6 +273,7 @@ with aba_ranking:
         
         ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(lambda x: obter_classificacao(x, t["patentes"]))
 
+        # Convertendo as datas do DataFrame para o formato DD/MM/AAAA para exibição
         df_exibicao = df_pontos.copy()
         df_exibicao['Data'] = pd.to_datetime(df_exibicao['Data']).dt.strftime('%d/%m/%Y')
 
