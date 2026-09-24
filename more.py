@@ -6,13 +6,22 @@ import json
 import random
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Multitemas de Terror - Ranking & Patentes", page_icon="🦇", layout="centered")
+st.set_page_config(page_title="Multitemas - Ranking & Patentes", page_icon="✨", layout="centered")
 
 ARQUIVO_DADOS = "pontuacoes_equipe.csv"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
 ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
 
-# --- CONFIGURAÇÃO DOS TEMAS (TODOS COM PEGADA DE TERROR, ADAPTADOS) ---
+# --- PATENTES ORIGINAIS (APLICADAS A TODOS OS TEMAS) ---
+PATENTES_ORIGINAIS = {
+    100: "👑 Deus Supremo",
+    75: "🐐 Cabrito Sagrado",
+    50: "🐎 Égua Satânica",
+    25: "🐴 Mula Juvenil",
+    0: "🎒 Mochila de Criança"
+}
+
+# --- CONFIGURAÇÃO DOS TEMAS COM FRASES ESPECÍFICAS ---
 TEMAS = {
     "💀 Cemitério Gótico": {
         "bg_app": "#09090B",
@@ -21,95 +30,81 @@ TEMAS = {
         "text_color": "#E4E4E7",
         "accent_color": "#A855F7",
         "icone": "💀",
-        "patentes": {100: "💀 Necromante Supremo", 75: "🦇 Senhor(a) da Noite", 50: "⚰️ Zumbi Insaciável", 25: "🕯️ Alma Penada", 0: "🦴 Ossinho Frágil"},
+        "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "As catacumbas guardam os segredos daqueles que não entregaram as metas...",
             "O roxo da meia-noite cobre os corredores enquanto o sistema aguarda.",
             "Cuidado com os passos falsos... o coveiro está sempre de olho nos relatórios."
         ]
     },
-    "👰 Noiva Fantasma": {
-        "bg_app": "#18181B",
-        "card_bg": "linear-gradient(135deg, #27272A, #09090B)",
+    "👰 Noiva e Casamentos": {
+        "bg_app": "#FDF2F8",
+        "card_bg": "linear-gradient(135deg, #FCE7F3, #FFF1F2)",
         "border_color": "#F472B6",
-        "text_color": "#F4F4F5",
-        "accent_color": "#FB7185",
+        "text_color": "#831843",
+        "accent_color": "#DB2777",
         "icone": "👰",
-        "patentes": {100: "💍 Noiva Espectral", 75: "💐 Dama do Véu Sangrento", 50: "🕊️ Assombração Romântica", 25: "💌 Aparição Solitária", 0: "🎀 Alma Abandonada no Altar"},
+        "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            "Até que o erro do sistema nos separe para todo o sempre...",
-            "Um véu rasgado, passos no altar vazio e prazos que nunca morrem.",
-            "A promessa era eterna, assim como a pilha de pendências na sua mesa."
+            "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
+            "Até que o fechamento da planilha nos una para sempre no altar!",
+            "Um casamento perfeito exige buquê lindo, convidados felizes e metas batidas."
         ]
     },
-    "💖 Meninas Sombrias": {
-        "bg_app": "#1A0A1C",
-        "card_bg": "linear-gradient(135deg, #3B0764, #18181B)",
-        "border_color": "#EC4899",
-        "text_color": "#FCE7F3",
-        "accent_color": "#F43F5E",
+    "💖 Meninas e Estilo": {
+        "bg_app": "#FFF1F2",
+        "card_bg": "linear-gradient(135deg, #FFE4E6, #FCE7F3)",
+        "border_color": "#FB7185",
+        "text_color": "#4C0519",
+        "accent_color": "#E11D48",
         "icone": "💖",
-        "patentes": {100: "👑 Rainha Vampira do Poder", 75: "💅 Ícone Gótico Chic", 50: "✨ Boneca Possuída de Ouro", 25: "🌸 Fada das Trevas", 0: "☕ Garota do Café Amaldiçoado"},
+        "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            "Garotas estilosas conquistam qualquer meta... mesmo que precisem morder alguém.",
-            "Brilhe na escuridão e mostre o seu poder com muito charme.",
-            "Foco, café frio, batom escuro e metas batidas nas sombras!"
+            "Garotas inteligentes conquistam qualquer meta com charme, salto alto e atitude!",
+            "Brilhe muito hoje, coloque o batom favorito e arrase nos resultados.",
+            "Foco, café, look do dia impecável e metas batidas com sucesso!"
         ]
     },
-    "🌈 Alegria Macabra": {
-        "bg_app": "#0A1F1C",
-        "card_bg": "linear-gradient(135deg, #064E3B, #09090B)",
-        "border_color": "#34D399",
-        "text_color": "#ECFDF5",
-        "accent_color": "#10B981",
-        "icone": "🌈",
-        "patentes": {100: "🌟 Unicórnio Zumbi Radiante", 75: "🦄 Criatura Mágica do Pântano", 50: "🌻 Girassol Carnívoro", 25: "🎈 Palhaço Sinistro Feliz", 0: "🌱 Sementinha Assombrada"},
-        "mensagens": [
-            "Sorria! Cada pontinho de hoje atrai um raio de sol... ou um raio laser mortal!",
-            "A alegria contagiante (literalmente um vírus zumbi) vai te ajudar a bater metas!",
-            "Espalhe energia positiva e fuja correndo dos monstros do escritório!"
-        ]
-    },
-    "💻 Cyber Terror": {
+    "💻 Tecnologia e Cyber": {
         "bg_app": "#030712",
         "card_bg": "linear-gradient(135deg, #0F172A, #030712)",
         "border_color": "#06B6D4",
         "text_color": "#E2E8F0",
         "accent_color": "#22D3EE",
         "icone": "💻",
-        "patentes": {100: "🤖 IA Assassina da Matrix", 75: "⚡ Hacker do Além-Túmulo", 50: "💻 Programador(a) zumbi", 25: "⌨️ Fantasma na Máquina", 0: "🔌 Desconectado(a) no Vazio"},
+        "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            "Executando rotina de abdução de dados... 100% concluído.",
-            "O código está assombrado, o servidor caiu, que comece o pânico.",
-            "Cuidado com os bugs mutantes na matrix corporativa."
+            "Executando rotina de otimização de dados... 100% de eficiência concluída.",
+            "O código está limpo, o deploy foi feito com sucesso e o sistema voa.",
+            "Conectado na matrix corporativa, processando cada desafio com inovação."
         ]
     },
-    "☕ Terror no Escritório": {
-        "bg_app": "#0F0F13",
-        "card_bg": "linear-gradient(135deg, #1E1B4B, #09090B)",
-        "border_color": "#6366F1",
-        "text_color": "#E0E7FF",
-        "accent_color": "#818CF8",
+    "☕ Escritório Corporativo": {
+        "bg_app": "#F8FAFC",
+        "card_bg": "linear-gradient(135deg, #F1F5F9, #E2E8F0)",
+        "border_color": "#CBD5E1",
+        "text_color": "#1E293B",
+        "accent_color": "#2563EB",
         "icone": "☕",
-        "patentes": {100: "👔 CEO dos Pesadelos", 75: "📊 Diretor(a) das Almas Perdidas", 50: "💼 Gerente Espectral", 25: "📋 Estagiário(a) Zumbi", 0: "☕ Viciado(a) em Café Frio"},
+        "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            "Reunião que podia ser um e-mail? Não, esta é uma maldição sem fim!",
-            "O café acabou, a planilha travou e o prazo venceu à meia-noite.",
-            "Organização corporativa e terror administrativo caminham juntos."
+            "Reunião que podia ser um e-mail? Aqui o foco é produtividade real!",
+            "O café quentinho está na xícara e a planilha aberta para começar o dia.",
+            "Organização, networking e foco nas entregas definem o sucesso de hoje."
         ]
     }
 }
 
 # --- BARRA LATERAL (CONFIGURAÇÕES E TEMAS) ---
 st.sidebar.title("🎨 Personalização")
-tema_escolhido = st.sidebar.selectbox("Escolha o Tema Sombrio:", list(TEMAS.keys()))
+tema_escolhido = st.sidebar.selectbox("Escolha o Tema Visual:", list(TEMAS.keys()))
 t = TEMAS[tema_escolhido]
 
 st.sidebar.markdown("---")
 st.sidebar.title("⚙️ Exibição")
 ocultar_boas_vindas = st.sidebar.checkbox("Ocultar mensagem de boas-vindas", value=False)
 
-# --- APLICAR CSS DINÂMICO CONFORME O TEMA (Chaves duplicadas para evitar conflito com f-string) ---
+# --- APLICAR CSS DINÂMICO CONFORME O TEMA ---
 st.markdown(f"""
     <style>
     .stApp {{
@@ -123,7 +118,7 @@ st.markdown(f"""
         border-radius: 14px;
         color: {t["text_color"]};
         margin-bottom: 15px;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
     }}
     @media (max-width: 768px) {{
         h1 {{ font-size: 22px !important; }}
@@ -191,8 +186,8 @@ if not ocultar_boas_vindas:
     st.markdown(
         f"""
         <div class="custom-card">
-            <h3 style="margin: 0; color: {t["accent_color"]};">{t["icone"]} Painel Sombrio - {tema_escolhido}</h3>
-            <p style="font-size: 13px; opacity: 0.7; margin-top: 2px;">📅 Data do Ritual: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
+            <h3 style="margin: 0; color: {t["accent_color"]};">{t["icone"]} Painel Interativo - {tema_escolhido}</h3>
+            <p style="font-size: 13px; opacity: 0.7; margin-top: 2px;">📅 Data: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
             <hr style="border: 0.5px solid {t["border_color"]}; margin: 8px 0;">
             <p style="font-size: 14px; margin: 0; font-style: italic;">"{mensagem_dia}"</p>
         </div>
@@ -200,25 +195,25 @@ if not ocultar_boas_vindas:
         unsafe_allow_html=True
     )
 
-st.title(f"{t['icone']} Ranking & Patentes das Trevas")
+st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
 
 # --- ABAS OTIMIZADAS PARA CELULAR ---
 aba_lancamento, aba_ranking, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "⚙️ Gestão"])
 
 with aba_lancamento:
-    st.subheader("Registrar Oferenda de Pontos")
+    st.subheader("Registrar Pontuação")
     with st.form("form_pontuacao", clear_on_submit=True):
         lista_nomes = list(carregar_integrantes().keys())
-        integrante = st.selectbox("Escolha o Adepto:", lista_nomes)
-        data_lancamento = st.date_input("Data do Sacrifício:", value=datetime.today())
+        integrante = st.selectbox("Escolha o Integrante:", lista_nomes)
+        data_lancamento = st.date_input("Data:", value=datetime.today())
         pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
-        observacao = st.text_input("Sussurro / Observação (Opcional):")
-        enviado = st.form_submit_button("🔥 Consagrar Pontuação", use_container_width=True)
+        observacao = st.text_input("Observação (Opcional):")
+        enviado = st.form_submit_button("🔥 Registrar Pontuação", use_container_width=True)
 
         if enviado:
             if not integrante:
-                st.warning("Selecione o adepto.")
+                st.warning("Selecione o integrante.")
             else:
                 nova_linha = pd.DataFrame([{
                     "Data": data_lancamento.strftime("%Y-%m-%d"),
@@ -228,21 +223,21 @@ with aba_lancamento:
                 }])
                 df_pontos = pd.concat([df_pontos, nova_linha], ignore_index=True)
                 df_pontos.to_csv(ARQUIVO_DADOS, index=False)
-                st.success("Pontuação registrada nas sombras com sucesso!")
+                st.success("Pontuação registrada com sucesso!")
                 st.rerun()
 
 with aba_ranking:
     if not df_pontos.empty:
-        st.subheader("📊 Estatísticas do Além")
+        st.subheader("📊 Estatísticas Gerais")
         total_pontos_geral = df_pontos["Pontos"].sum()
         maior_pontuacao_dia = df_pontos["Pontos"].max()
 
         c1, c2 = st.columns(2)
-        c1.metric("Almas Acumuladas", f"{int(total_pontos_geral)} pts")
-        c2.metric("Pico de Terror Diário", f"{int(maior_pontuacao_dia)} pts")
+        c1.metric("Pontos Acumulados", f"{int(total_pontos_geral)} pts")
+        c2.metric("Recorde Diário", f"{int(maior_pontuacao_dia)} pts")
 
         st.markdown("---")
-        st.subheader("🥇 Hierarquia Sombria")
+        st.subheader("🥇 Hierarquia Atual")
 
         ranking_geral = df_pontos.groupby("Integrante").agg(
             Total_Pontos=("Pontos", "sum"),
@@ -264,37 +259,37 @@ with aba_ranking:
         })
         st.dataframe(tabela_exib, use_container_width=True)
 
-        st.markdown("### 📈 Gráfico de Almas Coletadas")
+        st.markdown("### 📈 Gráfico de Pontuação")
         st.bar_chart(ranking_geral.set_index("Integrante")["Total_Pontos"])
 
         st.markdown("---")
         st.subheader("📋 Livro de Registros Recentes")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False), use_container_width=True)
     else:
-        st.info("Nenhum ritual registrado nas catacumbas ainda.")
+        st.info("Nenhum registro encontrado ainda.")
 
 with aba_admin:
-    st.subheader("➕ Despertar Novo Integrante")
+    st.subheader("➕ Adicionar Novo Integrante")
     with st.form("form_novo_integrante", clear_on_submit=True):
-        novo_nome = st.text_input("Nome do Adepto:")
-        nova_cor = st.color_picker("Cor Sombria de Destaque:", t["accent_color"])
-        cadastrar_btn = st.form_submit_button("Consagrar Adepto", use_container_width=True)
+        novo_nome = st.text_input("Nome:")
+        nova_cor = st.color_picker("Cor de Destaque:", t["accent_color"])
+        cadastrar_btn = st.form_submit_button("Cadastrar Integrante", use_container_width=True)
         
         if cadastrar_btn:
             if novo_nome.strip():
                 if novo_nome.strip() in integrantes_cores:
-                    st.warning("Este espírito já habita o cemitério!")
+                    st.warning("Este integrante já existe!")
                 else:
                     salvar_integrante(novo_nome.strip(), nova_cor)
-                    st.success(f"{novo_nome.strip()} foi despertado com sucesso!")
+                    st.success(f"{novo_nome.strip()} cadastrado com sucesso!")
                     st.rerun()
             else:
                 st.warning("Digite um nome válido.")
 
     st.markdown("---")
-    if st.button("🎉 Julgar e Apurar Campeão da Semana", use_container_width=True):
+    if st.button("🎉 Apurar Campeão da Semana", use_container_width=True):
         if df_pontos.empty:
-            st.warning("Sem pontuações para realizar o julgamento!")
+            st.warning("Sem pontuações para apurar!")
         else:
             df_pontos['Data_Parsed'] = pd.to_datetime(df_pontos['Data'], errors='coerce')
             hoje = datetime.today()
@@ -305,7 +300,7 @@ with aba_admin:
             df_semana_atual = df_pontos[df_pontos['Ano_Semana'] == chave_semana]
             
             if df_semana_atual.empty:
-                st.warning(f"Nenhum ritual encontrado na semana ({chave_semana}).")
+                st.warning(f"Nenhum lançamento encontrado na semana ({chave_semana}).")
             else:
                 ranking_semana = df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
                 ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
@@ -321,4 +316,4 @@ with aba_admin:
                 }
                 salvar_historico_json(historico)
                 st.balloons()
-                st.success(f"🦇 O(A) Senhor(a) Supremo(a) da Semana é {campeao} com {int(pontos_campeao)} pts!")
+                st.success(f"👑 O(A) grande campeão(ã) da semana é {campeao} com {int(pontos_campeao)} pts!")
