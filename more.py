@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
+import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Ranking & Campeão da Semana", page_icon="🏆", layout="wide")
 
 ARQUIVO_DADOS = "pontuacoes_equipe.csv"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
+ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
 
 # Cores padrão para os integrantes iniciais
 CORES_PADRAO = {
@@ -39,50 +41,87 @@ def carregar_dados():
     else:
         return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
 
+def carregar_historico_json():
+    if os.path.exists(ARQUIVO_HISTORICO_JSON):
+        with open(ARQUIVO_HISTORICO_JSON, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return {}
+    return {}
+
+def salvar_historico_json(historico):
+    with open(ARQUIVO_HISTORICO_JSON, "w", encoding="utf-8") as f:
+        json.dump(historico, f, ensure_ascii=False, indent=4)
+
 integrantes_cores = carregar_integrantes()
 df_pontos = carregar_dados()
 
 st.title("🏆 Ranking & Apuração do Campeão da Semana")
-st.markdown("Registre sua pontuação diária (máximo de 25 pontos) e descubra quem é o campeão da semana!")
+st.markdown("Registre sua pontuação diária (máximo de 25 pontos) e acompanhe o histórico semanal guardado em JSON!")
 st.markdown("---")
 
-# --- BOTÃO DE VERIFICAR CLASSIFICAÇÃO / CAMPEÃO DA SEMANA ---
-if st.button("🎉 VERIFICAR CLASSIFICAÇÃO & CAMPEÃO DA SEMANA!", use_container_width=True):
+# --- APURAÇÃO E TRAVA DA SEMANA ATUAL ---
+if st.button("🎉 APURAR E SALVAR CAMPEÃO DA SEMANA ATUAL!", use_container_width=True):
     if df_pontos.empty:
         st.warning("Ainda não há pontuações cadastradas para apurar o campeão!")
     else:
         df_pontos['Data_Parsed'] = pd.to_datetime(df_pontos['Data'], errors='coerce')
-        hoje = pd.to_datetime(datetime.today().date())
-        inicio_semana = hoje - timedelta(days=7)
         
-        # Filtrar dados dos últimos 7 dias
-        df_semana = df_pontos[df_pontos['Data_Parsed'] >= inicio_semana]
+        # Obter o Ano e o Número da Semana ISO atual
+        hoje = datetime.today()
+        ano_atual, semana_atual, _ = hoje.isocalendar()
+        chave_semana = f"Ano {ano_atual} - Semana {semana_atual}"
         
-        if df_semana.empty:
-            st.info("Nenhum lançamento registrado nos últimos 7 dias. Mostrando campeão do histórico geral:")
-            df_semana = df_pontos.copy()
+        # Filtrar dados da semana atual
+        df_pontos['Ano_Semana'] = df_pontos['Data_Parsed'].apply(lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else "")
+        df_semana_atual = df_pontos[df_pontos['Ano_Semana'] == chave_semana]
+        
+        if df_semana_atual.empty:
+            st.warning(f"Nenhum lançamento encontrado para a semana atual ({chave_semana}).")
+        else:
+            ranking_semana = df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
+            ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
             
-        ranking_semana = df_semana.groupby("Integrante")["Pontos"].sum().reset_index()
-        ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
-        
-        campeao = ranking_semana.iloc[0]["Integrante"]
-        pontos_campeao = ranking_semana.iloc[0]["Pontos"]
-        cor_campeao = integrantes_cores.get(campeao, "#2563EB")
-        
-        # --- QUADRO ALEGRE DE PREMIAÇÃO ---
-        st.balloons()
-        st.markdown(
-            f"""
-            <div style="background: linear-gradient(135deg, {cor_campeao}, #F59E0B); padding: 30px; border-radius: 15px; text-align: center; color: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
-                <h1 style="margin: 0; font-size: 40px;">👑 CAMPEÃO(A) DA SEMANA! 👑</h1>
-                <h2 style="margin: 10px 0; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">{campeao}</h2>
-                <p style="font-size: 20px; margin: 0;">Com uma pontuação espetacular de <b>{int(pontos_campeao)} pontos</b> nos últimos 7 dias!</p>
-                <h3 style="margin-top: 15px; font-style: italic;">Parabéns pelo excelente desempenho e dedicação! 🚀🌟</h3>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        st.markdown("<br>", unsafe_allow_html=True)
+            campeao = ranking_semana.iloc[0]["Integrante"]
+            pontos_campeao = ranking_semana.iloc[0]["Pontos"]
+            
+            # Salvar no JSON histórico (Trava da Semana)
+            historico = carregar_historico_json()
+            historico[chave_semana] = {
+                "campeao": campeao,
+                "pontos": int(pontos_campeao),
+                "ranking_completo": ranking_semana.to_dict(orient="records"),
+                "data_apuracao": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            salvar_historico_json(historico)
+            
+            cor_campeao = integrantes_cores.get(campeao, "#2563EB")
+            
+            st.balloons()
+            st.markdown(
+                f"""
+                <div style="background: linear-gradient(135deg, {cor_campeao}, #F59E0B); padding: 30px; border-radius: 15px; text-align: center; color: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
+                    <h1 style="margin: 0; font-size: 38px;">👑 CAMPEÃO(A) DA {chave_semana.upper()}! 👑</h1>
+                    <h2 style="margin: 10px 0; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">{campeao}</h2>
+                    <p style="font-size: 20px; margin: 0;">Pontuação acumulada: <b>{int(pontos_campeao)} pontos</b></p>
+                    <h3 style="margin-top: 15px; font-style: italic;">Resultado travado e salvo com sucesso no histórico JSON! 🔒🚀</h3>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            st.markdown("<br>", unsafe_allow_html=True)
+
+# --- EXIBIR HISTÓRICO DE CAMPEÕES SALVOS NO JSON ---
+historico_salvo = carregar_historico_json()
+if historico_salvo:
+    with st.expander("📜 Ver Histórico de Campeões Salvos (JSON)"):
+        for sem, dados in sorted(historico_salvo.items(), reverse=True):
+            st.markdown(f"### 🏆 {sem}")
+            st.write(f"**Campeão:** {dados['campeao']} ({dados['pontos']} pts) | *Apurado em:* {dados['data_apuracao']}")
+            df_rank_hist = pd.DataFrame(dados['ranking_completo'])
+            st.dataframe(df_rank_hist, use_container_width=True)
+            st.markdown("---")
 
 st.markdown("---")
 
