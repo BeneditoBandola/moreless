@@ -6,18 +6,139 @@ import json
 import random
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Ranking & Patentes das Trevas", page_icon="🦇", layout="wide")
+st.set_page_config(page_title="Multitemas de Terror - Ranking & Patentes", page_icon="🦇", layout="centered")
 
 ARQUIVO_DADOS = "pontuacoes_equipe.csv"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
 ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
 
-# Cores padrão para os integrantes iniciais
+# --- CONFIGURAÇÃO DOS TEMAS (TODOS COM PEGADA DE TERROR, ADAPTADOS) ---
+TEMAS = {
+    "💀 Cemitério Gótico": {
+        "bg_app": "#09090B",
+        "card_bg": "linear-gradient(135deg, #120A2A, #09090B)",
+        "border_color": "#4C1D95",
+        "text_color": "#E4E4E7",
+        "accent_color": "#A855F7",
+        "icone": "💀",
+        "patentes": {100: "💀 Necromante Supremo", 75: "🦇 Senhor(a) da Noite", 50: "⚰️ Zumbi Insaciável", 25: "🕯️ Alma Penada", 0: "🦴 Ossinho Frágil"},
+        "mensagens": [
+            "As catacumbas guardam os segredos daqueles que não entregaram as metas...",
+            "O roxo da meia-noite cobre os corredores enquanto o sistema aguarda.",
+            "Cuidado com os passos falsos... o coveiro está sempre de olho nos relatórios."
+        ]
+    },
+    "👰 Noiva Fantasma": {
+        "bg_app": "#18181B",
+        "card_bg": "linear-gradient(135deg, #27272A, #09090B)",
+        "border_color": "#F472B6",
+        "text_color": "#F4F4F5",
+        "accent_color": "#FB7185",
+        "icone": "👰",
+        "patentes": {100: "💍 Noiva Espectral", 75: "💐 Dama do Véu Sangrento", 50: "🕊️ Assombração Romântica", 25: "💌 Aparição Solitária", 0: "🎀 Alma Abandonada no Altar"},
+        "mensagens": [
+            "Até que o erro do sistema nos separe para todo o sempre...",
+            "Um véu rasgado, passos no altar vazio e prazos que nunca morrem.",
+            "A promessa era eterna, assim como a pilha de pendências na sua mesa."
+        ]
+    },
+    "💖 Meninas Sombrias": {
+        "bg_app": "#1A0A1C",
+        "card_bg": "linear-gradient(135deg, #3B0764, #18181B)",
+        "border_color": "#EC4899",
+        "text_color": "#FCE7F3",
+        "accent_color": "#F43F5E",
+        "icone": "💖",
+        "patentes": {100: "👑 Rainha Vampira do Poder", 75: "💅 Ícone Gótico Chic", 50: "✨ Boneca Possuída de Ouro", 25: "🌸 Fada das Trevas", 0: "☕ Garota do Café Amaldiçoado"},
+        "mensagens": [
+            "Garotas estilosas conquistam qualquer meta... mesmo que precisem morder alguém.",
+            "Brilhe na escuridão e mostre o seu poder com muito charme.",
+            "Foco, café frio, batom escuro e metas batidas nas sombras!"
+        ]
+    },
+    "🌈 Alegria Macabra": {
+        "bg_app": "#0A1F1C",
+        "card_bg": "linear-gradient(135deg, #064E3B, #09090B)",
+        "border_color": "#34D399",
+        "text_color": "#ECFDF5",
+        "accent_color": "#10B981",
+        "icone": "🌈",
+        "patentes": {100: "🌟 Unicórnio Zumbi Radiante", 75: "🦄 Criatura Mágica do Pântano", 50: "🌻 Girassol Carnívoro", 25: "🎈 Palhaço Sinistro Feliz", 0: "🌱 Sementinha Assombrada"},
+        "mensagens": [
+            "Sorria! Cada pontinho de hoje atrai um raio de sol... ou um raio laser mortal!",
+            "A alegria contagiante (literalmente um vírus zumbi) vai te ajudar a bater metas!",
+            "Espalhe energia positiva e fuja correndo dos monstros do escritório!"
+        ]
+    },
+    "💻 Cyber Terror": {
+        "bg_app": "#030712",
+        "card_bg": "linear-gradient(135deg, #0F172A, #030712)",
+        "border_color": "#06B6D4",
+        "text_color": "#E2E8F0",
+        "accent_color": "#22D3EE",
+        "icone": "💻",
+        "patentes": {100: "🤖 IA Assassina da Matrix", 75: "⚡ Hacker do Além-Túmulo", 50: "💻 Programador(a) zumbi", 25: "⌨️ Fantasma na Máquina", 0: "🔌 Desconectado(a) no Vazio"},
+        "mensagens": [
+            "Executando rotina de abdução de dados... 100% concluído.",
+            "O código está assombrado, o servidor caiu, que comece o pânico.",
+            "Cuidado com os bugs mutantes na matrix corporativa."
+        ]
+    },
+    "☕ Terror no Escritório": {
+        "bg_app": "#0F0F13",
+        "card_bg": "linear-gradient(135deg, #1E1B4B, #09090B)",
+        "border_color": "#6366F1",
+        "text_color": "#E0E7FF",
+        "accent_color": "#818CF8",
+        "icone": "☕",
+        "patentes": {100: "👔 CEO dos Pesadelos", 75: "📊 Diretor(a) das Almas Perdidas", 50: "💼 Gerente Espectral", 25: "📋 Estagiário(a) Zumbi", 0: "☕ Viciado(a) em Café Frio"},
+        "mensagens": [
+            "Reunião que podia ser um e-mail? Não, esta é uma maldição sem fim!",
+            "O café acabou, a planilha travou e o prazo venceu à meia-noite.",
+            "Organização corporativa e terror administrativo caminham juntos."
+        ]
+    }
+}
+
+# --- BARRA LATERAL (CONFIGURAÇÕES E TEMAS) ---
+st.sidebar.title("🎨 Personalização")
+tema_escolhido = st.sidebar.selectbox("Escolha o Tema Sombrio:", list(TEMAS.keys()))
+t = TEMAS[tema_escolhido]
+
+st.sidebar.markdown("---")
+st.sidebar.title("⚙️ Exibição")
+ocultar_boas_vindas = st.sidebar.checkbox("Ocultar mensagem de boas-vindas", value=False)
+
+# --- APLICAR CSS DINÂMICO CONFORME O TEMA ---
+st.markdown(f"""
+    <style>
+    .stApp {{
+        background-color: {t["bg_app"]};
+        color: {t["text_color"]};
+    }}
+    .custom-card {{
+        background: {t["card_bg"]};
+        border: 1px solid {t["border_color"]};
+        padding: 16px;
+        border-radius: 14px;
+        color: {t["text_color"]};
+        margin-bottom: 15px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+    }
+    @media (max-width: 768px) {{
+        h1 {{ font-size: 22px !important; }}
+        h2 {{ font-size: 18px !important; }}
+        h3 {{ font-size: 16px !important; }}
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
 CORES_PADRAO = {
-    "Benedito": "#1E3A8A",      # Azul Escuro
-    "Bárbara": "#DB2777",      # Rosa / Magenta
-    "Vinícius": "#059669",     # Verde Esmeralda
-    "Samuel": "#D97706"        # Laranja / Âmbar
+    "Benedito": "#2563EB",
+    "Bárbara": "#DB2777",
+    "Vinícius": "#059669",
+    "Samuel": "#D97706",
+    "Gabrielle": "#8B5CF6"
 }
 
 def carregar_integrantes():
@@ -55,187 +176,49 @@ def salvar_historico_json(historico):
     with open(ARQUIVO_HISTORICO_JSON, "w", encoding="utf-8") as f:
         json.dump(historico, f, ensure_ascii=False, indent=4)
 
-# --- FUNÇÃO PARA DEFINIR A CLASSIFICAÇÃO BASEADA NA PONTUAÇÃO ---
-def obter_classificacao(pontos):
-    if pontos >= 100:
-        return "👑 Deus Supremo"
-    elif pontos >= 75:
-        return "🐐 Cabrito Sagrado"
-    elif pontos >= 50:
-        return "🐎 Égua Satânica"
-    elif pontos >= 25:
-        return "🐴 Mula Juvenil"
-    else:
-        return "🎒 Mochila de Criança"
-
-# --- GERADOR DE 900+ MENSAGENS COM VIÉS DE TERROR E O SOMBRIO ---
-@st.cache_data
-def gerar_banco_mensagens_terror():
-    citacoes_sombrias = [
-        "Até mesmo o homem mais puro de coração e que reza em suas preces diárias, pode se tornar um monstro quando a meta não é batida.",
-        "Nas sombras da noite corporativa, os erros do passado nunca morrem... eles apenas esperam o próximo fechamento.",
-        "Cuidado com os passos que você dá nos corredores escuros; o fracasso espreita logo após a curva.",
-        "O relógio bate as doze badaladas, e o tempo para o fechamento se esvai como areia ensanguentada entre os dedos.",
-        "Há monstros piores do que aqueles que habitam os pesadelos: os prazos fatais que se aproximam.",
-        "Ninguém escapa das consequências de um relatório incompleto. A auditoria das trevas sempre cobra o seu preço.",
-        "O eco de metas não alcançadas ressoa eternamente nas catacumbas do esquecimento."
-    ]
-    
-    charadas_macabras = [
-        ("O que é, o que é: quanto mais se alimenta, mais cresce, mas se beber água, morre?", "O fogo... ou a ambição desmedida."),
-        ("O que é, o que é: tem asas mas não voa, tem olhos mas não vê, e habita a escuridão?", "Um morcego faminto nas torres do castelo."),
-        ("O que é, o что é: caminha de quatro pela manhã, de duas ao meio-dia e de três à noite?", "A criatura que rasteja pelas planícies da perdição."),
-        ("O que é, o que é: corta sem lâmina, fere sem punhal e silencia para sempre?", "O peso do remorso por deixar pontos para trás."),
-        ("O que é, o que é: quanto mais você tira dele, maior se torna o vazio?", "O abismo insondável dos números vermelhos.")
-    ]
-    
-    avisos_malignos = [
-        "Aviso das trevas: Se ouvir passos atrás de você na sala vazia, não olhe para trás... apenas acelere os lançamentos.",
-        "Profecia macabra: Aquele que hesitar em registrar os pontos de hoje será assombrado por planilhas infinitas na madrugada.",
-        "A maldição do sistema: Quem ousa zerar a pontuação por três dias consecutivos atrai a ira das forças ocultas da gerência.",
-        "Olhe bem para a tela: os pixels ao seu redor estão frios porque a ausência de metas cumpridas gela a alma.",
-        "Cuidado com o sussurro na penumbra: ele diz que a concorrência está vindo te buscar..."
-    ]
-    
-    lista_completa = []
-    
-    for i in range(150):
-        for c in citacoes_sombrias:
-            lista_completa.append(("🌑 Decreto das Sombras", f"{c} *(Sussurro #{i+1} da cripta)*"))
-        for a in avisos_malignos:
-            lista_completa.append(("⚰️ Alerta Macabro", f"{a} *(Aviso ritualístico #{i+1} de perigo)*"))
-        for p, r in charadas_macabras:
-            lista_completa.append(("🦇 Enigma do Abismo", f"**Enigma:** {p}<br>*(Decifre se tiver coragem...)*<br>💀 **Resposta Oculta:** {r} *(Registro #{i+1})*"))
-            
-    return lista_completa
+def obter_classificacao(pontos, patentes):
+    for limite in sorted(patentes.keys(), reverse=True):
+        if pontos >= limite:
+            return patentes[limite]
+    return list(patentes.values())[-1]
 
 integrantes_cores = carregar_integrantes()
 df_pontos = carregar_dados()
 
-# --- TELA DE BOAS-VINDAS SOMBRIA (DIÁRIA) ---
-banco_msgs = gerar_banco_mensagens_terror()
-hoje_str = datetime.today().strftime("%Y-%m-%d")
-indice_diario = abs(hash(hoje_str)) % len(banco_msgs)
-tipo_msg, texto_msg = banco_msgs[indice_diario]
+# --- TELA DE BOAS-VINDAS CONDICIONAL ---
+if not ocultar_boas_vindas:
+    mensagem_dia = random.choice(t["mensagens"])
+    st.markdown(
+        f"""
+        <div class="custom-card">
+            <h3 style="margin: 0; color: {t["accent_color"]};">{t["icone"]} Painel Sombrio - {tema_escolhido}</h3>
+            <p style="font-size: 13px; opacity: 0.7; margin-top: 2px;">📅 Data do Ritual: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
+            <hr style="border: 0.5px solid {t["border_color"]}; margin: 8px 0;">
+            <p style="font-size: 14px; margin: 0; font-style: italic;">"{mensagem_dia}"</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-st.markdown(
-    f"""
-    <div style="background: linear-gradient(135deg, #09090B, #18181B); border: 1px solid #27272A; padding: 25px; border-radius: 12px; color: #F4F4F5; margin-bottom: 20px; box-shadow: 0px 4px 20px rgba(0,0,0,0.8);">
-        <h2 style="margin: 0; font-size: 26px; color: #EF4444; font-family: serif;">🕯️ Bem-vindo(a) às Trevas do Expediente</h2>
-        <p style="font-size: 14px; opacity: 0.7; margin-top: 5px;">📅 Data da maldição: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
-        <hr style="border: 0.5px solid rgba(239, 68, 68, 0.3); margin: 12px 0;">
-        <h4 style="margin: 0 0 5px 0; color: #F87171;">{tipo_msg}:</h4>
-        <p style="font-size: 16px; margin: 0; line-height: 1.6; font-style: italic;">"{texto_msg}"</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.title("🏆 Ranking, Patentes & Apuração do Campeão")
-st.markdown("Registre sua pontuação diária (máximo de 25 pontos) e conquiste sua patente nas trevas!")
+st.title(f"{t['icone']} Ranking & Patentes das Trevas")
 st.markdown("---")
 
-# --- APURAÇÃO E TRAVA DA SEMANA ATUAL ---
-if st.button("🎉 APURAR E SALVAR CAMPEÃO DA SEMANA ATUAL!", use_container_width=True):
-    if df_pontos.empty:
-        st.warning("Ainda não há pontuações cadastradas para apurar o campeão!")
-    else:
-        df_pontos['Data_Parsed'] = pd.to_datetime(df_pontos['Data'], errors='coerce')
-        
-        hoje = datetime.today()
-        ano_atual, semana_atual, _ = hoje.isocalendar()
-        chave_semana = f"Ano {ano_atual} - Semana {semana_atual}"
-        
-        df_pontos['Ano_Semana'] = df_pontos['Data_Parsed'].apply(lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else "")
-        df_semana_atual = df_pontos[df_pontos['Ano_Semana'] == chave_semana]
-        
-        if df_semana_atual.empty:
-            st.warning(f"Nenhum lançamento encontrado para a semana atual ({chave_semana}).")
-        else:
-            ranking_semana = df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
-            ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
-            
-            campeao = ranking_semana.iloc[0]["Integrante"]
-            pontos_campeao = ranking_semana.iloc[0]["Pontos"]
-            
-            historico = carregar_historico_json()
-            historico[chave_semana] = {
-                "campeao": campeao,
-                "pontos": int(pontos_campeao),
-                "ranking_completo": ranking_semana.to_dict(orient="records"),
-                "data_apuracao": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            salvar_historico_json(historico)
-            
-            cor_campeao = integrantes_cores.get(campeao, "#7F1D1D")
-            
-            st.balloons()
-            st.markdown(
-                f"""
-                <div style="background: linear-gradient(135deg, {cor_campeao}, #09090B); border: 2px solid #EF4444; padding: 30px; border-radius: 15px; text-align: center; color: white; box-shadow: 0px 0px 25px rgba(239,68,68,0.5);">
-                    <h1 style="margin: 0; font-size: 38px; color: #FCA5A5;">👑 SENHOR(A) DAS SOMBRAS DA {chave_semana.upper()} 👑</h1>
-                    <h2 style="margin: 10px 0; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.9);">{campeao}</h2>
-                    <p style="font-size: 20px; margin: 0;">Almas/Pontos colhidos: <b>{int(pontos_campeao)} pontos</b></p>
-                    <h3 style="margin-top: 15px; font-style: italic; color: #FCA5A5;">O trono sombrio foi conquistado! Salvo no grimório JSON. 🦇🔥</h3>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            st.markdown("<br>", unsafe_allow_html=True)
+# --- ABAS OTIMIZADAS PARA CELULAR ---
+aba_lancamento, aba_ranking, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "⚙️ Gestão"])
 
-# --- EXIBIR HISTÓRICO DE CAMPEÕES SALVOS NO JSON ---
-historico_salvo = carregar_historico_json()
-if historico_salvo:
-    with st.expander("📜 Ver Grimório Histórico de Campeões (JSON)"):
-        for sem, dados in sorted(historico_salvo.items(), reverse=True):
-            st.markdown(f"### 🦇 {sem}")
-            st.write(f"**Senhor(a) das Sombras:** {dados['campeao']} ({dados['pontos']} pts) | *Rito de apuração:* {dados['data_apuracao']}")
-            df_rank_hist = pd.DataFrame(dados['ranking_completo'])
-            st.dataframe(df_rank_hist, use_container_width=True)
-            st.markdown("---")
-
-st.markdown("---")
-
-# --- CADASTRO DE NOVO INTEGRANTE ---
-with st.expander("➕ Iniciar Novo Adepto / Integrante"):
-    with st.form("form_novo_integrante", clear_on_submit=True):
-        novo_nome = st.text_input("Nome do Integrante:")
-        nova_cor = st.color_picker("Escolha a Cor Sombria de Destaque:", "#7F1D1D")
-        cadastrar_btn = st.form_submit_button("Consagrar Integrante")
-        
-        if cadastrar_btn:
-            if novo_nome.strip():
-                if novo_nome.strip() in integrantes_cores:
-                    st.warning("Este adepto já habita as trevas!")
-                else:
-                    salvar_integrante(novo_nome.strip(), nova_cor)
-                    st.success(f"Integrante {novo_nome.strip()} consagrado com sucesso!")
-                    st.rerun()
-            else:
-                st.warning("Digite um nome válido.")
-
-# --- FORMULÁRIO DE LANÇAMENTO ---
-with st.container():
-    st.subheader("📝 Oferenda Diária de Pontuação")
+with aba_lancamento:
+    st.subheader("Registrar Oferenda de Pontos")
     with st.form("form_pontuacao", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            lista_nomes = list(carregar_integrantes().keys())
-            integrante = st.selectbox("Selecione o Integrante:", lista_nomes)
-
-        with col2:
-            data_lancamento = st.date_input("Data do Sacrifício / Lançamento:", value=datetime.today())
-            
-        with col3:
-            pontos = st.number_input("Pontos do Dia (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
-
+        lista_nomes = list(carregar_integrantes().keys())
+        integrante = st.selectbox("Escolha o Adepto:", lista_nomes)
+        data_lancamento = st.date_input("Data do Sacrifício:", value=datetime.today())
+        pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
         observacao = st.text_input("Sussurro / Observação (Opcional):")
-        enviado = st.form_submit_button("🔥 Consagrar Pontuação")
+        enviado = st.form_submit_button("🔥 Consagrar Pontuação", use_container_width=True)
 
         if enviado:
             if not integrante:
-                st.warning("Por favor, selecione o integrante.")
+                st.warning("Selecione o adepto.")
             else:
                 nova_linha = pd.DataFrame([{
                     "Data": data_lancamento.strftime("%Y-%m-%d"),
@@ -243,66 +226,100 @@ with st.container():
                     "Pontos": int(pontos),
                     "Observação": observacao if observacao else ""
                 }])
-                
                 df_pontos = pd.concat([df_pontos, nova_linha], ignore_index=True)
                 df_pontos.to_csv(ARQUIVO_DADOS, index=False)
-                st.success(f"Pontuação de {integrante} registrada nas sombras!")
+                st.success("Pontuação registrada nas sombras com sucesso!")
                 st.rerun()
 
-st.markdown("---")
+with aba_ranking:
+    if not df_pontos.empty:
+        st.subheader("📊 Estatísticas do Além")
+        total_pontos_geral = df_pontos["Pontos"].sum()
+        maior_pontuacao_dia = df_pontos["Pontos"].max()
 
-# --- PAINEL DE ESTATÍSTICAS E RANKING COM CLASSIFICAÇÕES ---
-if not df_pontos.empty:
-    st.subheader("📊 Painel de Profecias & Estatísticas")
+        c1, c2 = st.columns(2)
+        c1.metric("Almas Acumuladas", f"{int(total_pontos_geral)} pts")
+        c2.metric("Pico de Terror Diário", f"{int(maior_pontuacao_dia)} pts")
 
-    total_pontos_geral = df_pontos["Pontos"].sum()
-    media_geral = df_pontos["Pontos"].mean()
-    total_lancamentos = len(df_pontos)
-    maior_pontuacao_dia = df_pontos["Pontos"].max()
+        st.markdown("---")
+        st.subheader("🥇 Hierarquia Sombria")
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Almas Acumuladas (Equipe)", f"{int(total_pontos_geral)} pts")
-    c2.metric("Média por Sacrifício", f"{media_geral:.1f} pts")
-    c3.metric("Total de Rituais", f"{total_lancamentos}")
-    c4.metric("Recorde das Trevas", f"{int(maior_pontuacao_dia)} pts")
+        ranking_geral = df_pontos.groupby("Integrante").agg(
+            Total_Pontos=("Pontos", "sum"),
+            Dias_Trabalhados=("Pontos", "count")
+        ).reset_index()
 
-    st.markdown("---")
+        ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
+        ranking_geral.index = ranking_geral.index + 1
+        ranking_geral.index.name = "Posição"
+        ranking_geral = ranking_geral.reset_index()
+        
+        ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(lambda x: obter_classificacao(x, t["patentes"]))
 
-    ranking_geral = df_pontos.groupby("Integrante").agg(
-        Total_Pontos=("Pontos", "sum"),
-        Media_Diaria=("Pontos", "mean"),
-        Dias_Trabalhados=("Pontos", "count")
-    ).reset_index()
+        # Formatar a data no histórico geral se necessário
+        df_exibicao = df_pontos.copy()
+        df_exibicao['Data'] = pd.to_datetime(df_exibicao['Data']).dt.strftime('%d/%m/%Y')
 
-    ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
-    ranking_geral.index = ranking_geral.index + 1
-    ranking_geral.index.name = "Posição"
-    ranking_geral = ranking_geral.reset_index()
-
-    # Adicionar a coluna de classificação temática
-    ranking_geral["Patente / Classificação"] = ranking_geral["Total_Pontos"].apply(obter_classificacao)
-
-    col_a, col_b = st.columns(2)
-    
-    with col_a:
-        st.markdown("### 🥇 Hierarquia das Sombras (Ranking & Patentes)")
-        tabela_exib = ranking_geral[["Posição", "Integrante", "Total_Pontos", "Patente / Classificação", "Dias_Trabalhados"]].rename(columns={
-            "Integrante": "Integrantes",
-            "Total_Pontos": "Total (Pts)",
-            "Dias_Trabalhados": "Rituais"
+        tabela_exib = ranking_geral[["Posição", "Integrante", "Total_Pontos", "Patente"]].rename(columns={
+            "Total_Pontos": "Total"
         })
         st.dataframe(tabela_exib, use_container_width=True)
 
-    with col_b:
-        st.markdown("### 📈 Panorama das Almas Colhidas")
+        st.markdown("### 📈 Gráfico de Almas Coletadas")
         st.bar_chart(ranking_geral.set_index("Integrante")["Total_Pontos"])
 
-    st.markdown("---")
-    st.subheader("📋 Livro de Registros das Trevas")
-    st.dataframe(df_pontos.sort_values(by="Data", ascending=False), use_container_width=True)
-    
-    csv = df_pontos.to_csv(index=False).encode('utf-8-sig')
-    st.download_button("📥 Baixar Grimório em CSV", data=csv, file_name="historico_pontuacoes.csv", mime="text/csv")
+        st.markdown("---")
+        st.subheader("📋 Livro de Registros Recentes")
+        st.dataframe(df_exibicao.sort_values(by="Data", ascending=False), use_container_width=True)
+    else:
+        st.info("Nenhum ritual registrado nas catacumbas ainda.")
 
-else:
-    st.info("Nenhum ritual registrado ainda. Faça a primeira oferenda de pontos acima!")
+with aba_admin:
+    st.subheader("➕ Despertar Novo Integrante")
+    with st.form("form_novo_integrante", clear_on_submit=True):
+        novo_nome = st.text_input("Nome do Adepto:")
+        nova_cor = st.color_picker("Cor Sombria de Destaque:", t["accent_color"])
+        cadastrar_btn = st.form_submit_button("Consagrar Adepto", use_container_width=True)
+        
+        if cadastrar_btn:
+            if novo_nome.strip():
+                if novo_nome.strip() in integrantes_cores:
+                    st.warning("Este espírito já habita o cemitério!")
+                else:
+                    salvar_integrante(novo_nome.strip(), nova_cor)
+                    st.success(f"{novo_nome.strip()} foi despertado com sucesso!")
+                    st.rerun()
+            else:
+                st.warning("Digite um nome válido.")
+
+    st.markdown("---")
+    if st.button("🎉 Julgar e Apurar Campeão da Semana", use_container_width=True):
+        if df_pontos.empty:
+            st.warning("Sem pontuações para realizar o julgamento!")
+        else:
+            df_pontos['Data_Parsed'] = pd.to_datetime(df_pontos['Data'], errors='coerce')
+            hoje = datetime.today()
+            ano_atual, semana_atual, _ = hoje.isocalendar()
+            chave_semana = f"Ano {ano_atual} - Semana {semana_atual}"
+            
+            df_pontos['Ano_Semana'] = df_pontos['Data_Parsed'].apply(lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else "")
+            df_semana_atual = df_pontos[df_pontos['Ano_Semana'] == chave_semana]
+            
+            if df_semana_atual.empty:
+                st.warning(f"Nenhum ritual encontrado na semana ({chave_semana}).")
+            else:
+                ranking_semana = df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
+                ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
+                campeao = ranking_semana.iloc[0]["Integrante"]
+                pontos_campeao = ranking_semana.iloc[0]["Pontos"]
+                
+                historico = carregar_historico_json()
+                historico[chave_semana] = {
+                    "campeao": campeao,
+                    "pontos": int(pontos_campeao),
+                    "ranking_completo": ranking_semana.to_dict(orient="records"),
+                    "data_apuracao": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                }
+                salvar_historico_json(historico)
+                st.balloons()
+                st.success(f"🦇 O(A) Senhor(a) Supremo(a) da Semana é {campeao} com {int(pontos_campeao)} pts!")
