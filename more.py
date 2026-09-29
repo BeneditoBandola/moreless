@@ -118,10 +118,6 @@ st.sidebar.title("🎨 Personalização")
 tema_escolhido = st.sidebar.selectbox("Escolha o Tema Visual:", list(TEMAS.keys()))
 t = TEMAS[tema_escolhido]
 
-st.sidebar.markdown("---")
-st.sidebar.title("⚙️ Exibição")
-ocultar_boas_vindas = st.sidebar.checkbox("Ocultar mensagem de boas-vindas", value=False)
-
 st.markdown(
     f"""
     <style>
@@ -145,6 +141,16 @@ st.markdown(
     input, select, textarea {{
         background-color: {t["input_bg"]} !important;
         color: {t["input_text"]} !important;
+    }}
+    /* Estilo para padronizar as fotos do pódio em tamanho fixo e redondas */
+    .podium-img {{
+        width: 75px;
+        height: 75px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #FFD700;
+        display: block;
+        margin: 0 auto;
     }}
     </style>
 """,
@@ -245,25 +251,10 @@ integrantes_info = carregar_integrantes()
 dados_diarios = carregar_dados_json()
 df_pontos = converter_json_para_dataframe(dados_diarios)
 
-# --- BOAS-VINDAS ---
-if not ocultar_boas_vindas:
-    mensagem_dia = random.choice(t["mensagens"])
-    st.markdown(
-        f"""
-        <div class="custom-card">
-            <h3 style="margin: 0; color: {t["accent_color"]};">{t["icone"]} Painel Interativo - {tema_escolhido}</h3>
-            <p style="font-size: 13px; opacity: 0.8; margin-top: 2px;">📅 Data: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
-            <hr style="border: 0.5px solid {t["border_color"]}; margin: 8px 0;">
-            <p style="font-size: 14px; margin: 0; font-style: italic;">"{mensagem_dia}"</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
 
-aba_lancamento, aba_ranking, aba_podio, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "🥇 Pódio", "⚙️️ Gestão"])
+aba_lancamento, aba_ranking, aba_podio, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "🥇 Pódio", "⚙ Gestão"])
 
 with aba_lancamento:
     st.subheader("Registrar Pontuação por Data")
@@ -369,7 +360,7 @@ with aba_ranking:
         st.info("Nenhum registo encontrado ainda.")
 
 with aba_podio:
-    st.subheader("🏆 Pódio Geral - Se terminasse hoje")
+    st.subheader("🏆 Pódio Oficial - Se terminasse hoje")
     if not df_pontos.empty:
         ranking_podio = (
             df_pontos.groupby("Integrante")["Pontos"].sum().reset_index()
@@ -377,25 +368,51 @@ with aba_podio:
             .reset_index(drop=True)
         )
 
-        # Garante até 5 lugares no pódio
-        cols = st.columns(min(5, len(ranking_podio)))
-        medalhas = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+        total_participantes = len(ranking_podio)
 
-        for i, row in ranking_podio.head(5).iterrows():
-            nome = row["Integrante"]
-            pts = row["Pontos"]
-            info = integrantes_info.get(nome, {})
-            foto = info.get("Foto", "")
-            cor = info.get("Cor", t["accent_color"])
+        # Mapeia os 5 primeiros (com segurança caso haja menos de 5)
+        p = {}
+        for idx, row in ranking_podio.head(5).iterrows():
+            p[idx + 1] = {
+                "nome": row["Integrante"],
+                "pontos": int(row["Pontos"]),
+                "foto": integrantes_info.get(row["Integrante"], {}).get("Foto", ""),
+                "cor": integrantes_info.get(row["Integrante"], {}).get("Cor", t["accent_color"])
+            }
 
+        # Ordem visual clássica de pódio de corrida: 2º, 1º, 3º, 4º, 5º
+        ordem_podio = [2, 1, 3, 4, 5]
+        
+        cols = st.columns(5)
+        
+        for i, pos_alvo in enumerate(ordem_podio):
             with cols[i]:
-                st.markdown(f"### {medalhas[i]}")
-                if foto and os.path.exists(foto):
-                    st.image(foto, width=80)
+                if pos_alvo in p:
+                    dados = p[pos_alvo]
+                    
+                    # Alturas personalizadas para simular os degraus do pódio
+                    alturas_degrau = {1: "180px", 2: "130px", 3: "90px", 4: "60px", 5: "40px"}
+                    medalhas = {1: "🥇 1º", 2: "🥈 2º", 3: "🥉 3º", 4: "4º", 5: "5º"}
+                    
+                    # Exibe a foto em cima com proporção idêntica
+                    if dados["foto"] and os.path.exists(dados["foto"]):
+                        st.markdown(f'<img src="data:image/jpeg;base64,{base64_encode(dados["foto"])}" class="podium-img">', unsafe_allow_html=True)
+                        # Nota: Se preferir usar o nativo do streamlit garantindo proporção:
+                        # st.image(dados["foto"], width=75)
+                    else:
+                        st.markdown("<div style='text-align: center; font-size: 30px;'>👤</div>", unsafe_allow_html=True)
+                    
+                    st.markdown(f"<h5 style='color: {dados['cor']}; text-align: center; margin: 5px 0;'>{dados['nome']}</h5>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='text-align: center; font-size: 13px; margin: 0;'>{dados['pontos']} pts</p>", unsafe_allow_html=True)
+                    
+                    # Bloco visual do degrau
+                    st.markdown(f"""
+                        <div style='background: {dados['cor']}; height: {alturas_degrau[pos_alvo]}; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: center; margin-top: 10px;'>
+                            <b style='color: white; font-size: 18px;'>{medalhas[pos_alvo]}</b>
+                        </div>
+                    """, unsafe_allow_html=True)
                 else:
-                    st.markdown("👤")
-                st.markdown(f"<h4 style='color: {cor}; text-align: center;'>{nome}</h4>", unsafe_allow_html=True)
-                st.markdown(f"<p style='text-align: center; font-weight: bold;'>{int(pts)} pts</p>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align: center; color: gray; margin-top: 50px;'>-</div>", unsafe_allow_html=True)
     else:
         st.info("Nenhum dado disponível para montar o pódio.")
 
@@ -425,7 +442,6 @@ with aba_admin:
                 if btn_salvar_foto:
                     caminho_salvo = info_sel.get("Foto", "")
                     if nova_foto_file is not None:
-                        # Salva com nome limpo baseado no integrante
                         caminho_salvo = os.path.join(PASTA_FOTOS, f"{integrante_foto_sel}.jpg")
                         with open(caminho_salvo, "wb") as f:
                             f.write(nova_foto_file.getbuffer())
