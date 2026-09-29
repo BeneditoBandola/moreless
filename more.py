@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import os
 import random
@@ -12,49 +12,42 @@ st.set_page_config(
     layout="centered",
 )
 
-ARQUIVO_DADOS = "pontuacoes_equipe.csv"
+ARQUIVO_DADOS_JSON = "dados_diarios.json"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
 ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
 
 # --- LISTA EXTENSA DE AVATARES DIVERTIDOS ---
 LISTA_AVATARES = [
-    # Noivas & Casamento
     "👰 Noivinha Clássica",
     "🤵 Noivo Elegante",
     "💍 Aliança de Ouro",
     "💐 Bouquet de Flores",
     "💒 Capela dos Sonhos",
-    # Sci-Fi & Espaço
     "👽 ET Cinzento",
     "🛸 Disco Voador",
     "🤖 Robô Cibernético",
     "🪐 Planeta Anelado",
     "🚀 Foguete Espacial",
-    # Star Wars & Épicos
     "🌌 Mestre Jedi",
     "⚔️ Cavaleiro Sith",
     "🛡️ Caçador de Recompensas",
     "🪐 Piloto Estelar",
     "🔮 Mago Supremo",
-    # Mágicos & Fantasia
     "🧞 Gênio da Lâmpada",
     "🧞‍♂️ Espírito Mágico",
     "🧚 Fada Madrinha",
     "🧙 Mago das Fórmulas",
     "🦄 Unicórnio Mágico",
-    # Animações & Personagens
     "🍌 Minion Maluco",
     "👾 Monstrinho Pixel",
     "👻 Fantasminha Camarada",
     "🦸 Super-Herói",
     "🦹 Super-Vilão",
-    # Animais & Mascotes
     "🐐 Cabrito Sagrado",
     "🐎 Égua Veloz",
     "🐴 Mula Carinhosa",
     "🦁 Leão Corajoso",
     "🦊 Raposa Astuta",
-    # Outros & Divertidos
     "👑 Rei do Trono",
     "💼 Diretor Executivo",
     "☕ Xícara de Café",
@@ -62,7 +55,6 @@ LISTA_AVATARES = [
     "💀 Caveira Estilosa",
 ]
 
-# --- PATENTES ORIGINAIS (APLICADAS A TODOS OS TEMAS) ---
 PATENTES_ORIGINAIS = {
     100: "👑 Deus Supremo",
     75: "🐐 Cabrito Sagrado",
@@ -71,7 +63,6 @@ PATENTES_ORIGINAIS = {
     0: "🎒 Mochila de Criança",
 }
 
-# --- CONFIGURAÇÃO DOS TEMAS COM CORES E ESTILOS CORRIGIDOS ---
 TEMAS = {
     "💀 Cemitério": {
         "bg_app": "#09090B",
@@ -84,18 +75,9 @@ TEMAS = {
         "icone": "💀",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            (
-                "As catacumbas guardam os segredos daqueles que não entregaram"
-                " as metas..."
-            ),
-            (
-                "O roxo da meia-noite cobre os corredores enquanto o sistema"
-                " aguarda."
-            ),
-            (
-                "Cuidado com os passos falsos... o coveiro está sempre de olho"
-                " nos relatórios."
-            ),
+            "As catacumbas guardam os segredos daqueles que não entregaram as metas...",
+            "O roxo da meia-noite cobre os corredores enquanto o sistema aguarda.",
+            "Cuidado com os passos falsos... o coveiro está sempre de olho nos relatórios.",
         ],
     },
     "👰 Noiva e Casamentos": {
@@ -109,15 +91,9 @@ TEMAS = {
         "icone": "👰",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            (
-                "Planejando cada detalhe com amor, elegância e foco total nas"
-                " metas do grande dia."
-            ),
+            "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
             "Até que o fecho da folha de cálculo nos una para sempre no altar!",
-            (
-                "Um casamento perfeito exige um bouquet lindo, convidados"
-                " felizes e metas batidas."
-            ),
+            "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
     "💖 Meninas e Estilo": {
@@ -131,14 +107,8 @@ TEMAS = {
         "icone": "💖",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            (
-                "Garotas inteligentes conquistam qualquer meta com charme, salto"
-                " alto e atitude!"
-            ),
-            (
-                "Brilhe muito hoje, coloque o batom favorito e arrase nos"
-                " resultados."
-            ),
+            "Garotas inteligentes conquistam qualquer meta com charme, salto alto e atitude!",
+            "Brilhe muito hoje, coloque o batom favorito e arrase nos resultados.",
             "Foco, café, look do dia impecável e metas batidas com sucesso!",
         ],
     },
@@ -153,18 +123,9 @@ TEMAS = {
         "icone": "💻",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            (
-                "A executar rotina de otimização de dados... 100% de eficiência"
-                " concluída."
-            ),
-            (
-                "O código está limpo, o deploy foi feito com sucesso e o"
-                " sistema voa."
-            ),
-            (
-                "Conectado na matrix corporativa, a processar cada desafio com"
-                " inovação."
-            ),
+            "A executar rotina de otimização de dados... 100% de eficiência concluída.",
+            "O código está limpo, o deploy foi feito com sucesso e o sistema voa.",
+            "Conectado na matrix corporativa, a processar cada desafio com inovação.",
         ],
     },
     "☕ Escritório Corporativo": {
@@ -178,36 +139,22 @@ TEMAS = {
         "icone": "☕",
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
-            (
-                "Reunião que podia ser um e-mail? Aqui o foco é produtividade"
-                " real!"
-            ),
-            (
-                "O café quentinho está na chávena e a folha de cálculo aberta"
-                " para começar o dia."
-            ),
-            (
-                "Organização, networking e foco nas entregas definem o sucesso"
-                " de hoje."
-            ),
+            "Reunião que podia ser um e-mail? Aqui o foco é produtividade real!",
+            "O café quentinho está na chávena e a folha de cálculo aberta para começar o dia.",
+            "Organização, networking e foco nas entregas definem o sucesso de hoje.",
         ],
     },
 }
 
-# --- BARRA LATERAL (CONFIGURAÇÕES E TEMAS) ---
+# --- BARRA LATERAL ---
 st.sidebar.title("🎨 Personalização")
-tema_escolhido = st.sidebar.selectbox(
-    "Escolha o Tema Visual:", list(TEMAS.keys())
-)
+tema_escolhido = st.sidebar.selectbox("Escolha o Tema Visual:", list(TEMAS.keys()))
 t = TEMAS[tema_escolhido]
 
 st.sidebar.markdown("---")
 st.sidebar.title("⚙️ Exibição")
-ocultar_boas_vindas = st.sidebar.checkbox(
-    "Ocultar mensagem de boas-vindas", value=False
-)
+ocultar_boas_vindas = st.sidebar.checkbox("Ocultar mensagem de boas-vindas", value=False)
 
-# --- APLICAR CSS CORRIGIDO PARA EVITAR TEXTO INVISÍVEL ---
 st.markdown(
     f"""
     <style>
@@ -232,17 +179,11 @@ st.markdown(
         background-color: {t["input_bg"]} !important;
         color: {t["input_text"]} !important;
     }}
-    @media (max-width: 768px) {{
-        h1 {{ font-size: 22px !important; }}
-        h2 {{ font-size: 18px !important; }}
-        h3 {{ font-size: 16px !important; }}
-    }}
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Dicionário padrão inicial para o CSV de integrantes (Nome, Cor, Avatar)
 INTEGRANTES_PADRAO = {
     "Benedito": {"Cor": "#2563EB", "Avatar": "👑 Rei do Trono"},
     "Bárbara": {"Cor": "#DB2777", "Avatar": "👰 Noivinha Clássica"},
@@ -254,74 +195,93 @@ INTEGRANTES_PADRAO = {
 
 
 def carregar_integrantes():
-  if os.path.exists(ARQUIVO_INTEGRANTES):
-    df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
-    # Garante compatibilidade caso o arquivo antigo não tenha a coluna Avatar
-    if "Avatar" not in df_int.columns:
-      df_int["Avatar"] = "👤 Participante"
-    return df_int.set_index("Nome").to_dict(orient="index")
-  else:
-    dados_lista = []
-    for nome, info in INTEGRANTES_PADRAO.items():
-      dados_lista.append(
-          {"Nome": nome, "Cor": info["Cor"], "Avatar": info["Avatar"]}
-      )
-    df_int = pd.DataFrame(dados_lista)
-    df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
-    return df_int.set_index("Nome").to_dict(orient="index")
+    if os.path.exists(ARQUIVO_INTEGRANTES):
+        df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
+        if "Avatar" not in df_int.columns:
+            df_int["Avatar"] = "👤 Participante"
+        return df_int.set_index("Nome").to_dict(orient="index")
+    else:
+        dados_lista = []
+        for nome, info in INTEGRANTES_PADRAO.items():
+            dados_lista.append({"Nome": nome, "Cor": info["Cor"], "Avatar": info["Avatar"]})
+        df_int = pd.DataFrame(dados_lista)
+        df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
+        return df_int.set_index("Nome").to_dict(orient="index")
 
 
 def salvar_integrante(nome, cor, avatar):
-  integrantes_dict = carregar_integrantes()
-  integrantes_dict[nome] = {"Cor": cor, "Avatar": avatar}
-  dados_lista = []
-  for n, info in integrantes_dict.items():
-    dados_lista.append(
-        {"Nome": n, "Cor": info["Cor"], "Avatar": info["Avatar"]}
-    )
-  df_int = pd.DataFrame(dados_lista)
-  df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
+    integrantes_dict = carregar_integrantes()
+    integrantes_dict[nome] = {"Cor": cor, "Avatar": avatar}
+    dados_lista = []
+    for n, info in integrantes_dict.items():
+        dados_lista.append({"Nome": n, "Cor": info["Cor"], "Avatar": info["Avatar"]})
+    df_int = pd.DataFrame(dados_lista)
+    df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
 
-def carregar_dados():
-  if os.path.exists(ARQUIVO_DADOS):
-    return pd.read_csv(ARQUIVO_DADOS)
-  else:
-    return pd.DataFrame(
-        columns=["Data", "Integrante", "Pontos", "Observação"]
-    )
+# --- FUNÇÕES DE MANIPULAÇÃO DO JSON DIÁRIO ---
+def carregar_dados_json():
+    if os.path.exists(ARQUIVO_DADOS_JSON):
+        with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return {}
+    return {}
+
+
+def salvar_dados_json(dados):
+    with open(ARQUIVO_DADOS_JSON, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=4)
+
+
+def converter_json_para_dataframe(dados_json):
+    """Converte a estrutura do JSON diário em um DataFrame plano para fácil leitura."""
+    linhas = []
+    for data_str, registros in dados_json.items():
+        for integrante, info in registros.items():
+            linhas.append({
+                "Data": data_str,
+                "Integrante": integrante,
+                "Pontos": info.get("Pontos", 0),
+                "Observação": info.get("Observação", ""),
+            })
+    if not linhas:
+        return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+    return pd.DataFrame(linhas)
 
 
 def carregar_historico_json():
-  if os.path.exists(ARQUIVO_HISTORICO_JSON):
-    with open(ARQUIVO_HISTORICO_JSON, "r", encoding="utf-8") as f:
-      try:
-        return json.load(f)
-      except:
-        return {}
-  return {}
+    if os.path.exists(ARQUIVO_HISTORICO_JSON):
+        with open(ARQUIVO_HISTORICO_JSON, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return {}
+    return {}
 
 
 def salvar_historico_json(historico):
-  with open(ARQUIVO_HISTORICO_JSON, "w", encoding="utf-8") as f:
-    json.dump(historico, f, ensure_ascii=False, indent=4)
+    with open(ARQUIVO_HISTORICO_JSON, "w", encoding="utf-8") as f:
+        json.dump(historico, f, ensure_ascii=False, indent=4)
 
 
 def obter_classificacao(pontos, patentes):
-  for limite in sorted(patentes.keys(), reverse=True):
-    if pontos >= limite:
-      return patentes[limite]
-  return list(patentes.values())[-1]
+    for limite in sorted(patentes.keys(), reverse=True):
+        if pontos >= limite:
+            return patentes[limite]
+    return list(patentes.values())[-1]
 
 
 integrantes_info = carregar_integrantes()
-df_pontos = carregar_dados()
+dados_diarios = carregar_dados_json()
+df_pontos = converter_json_para_dataframe(dados_diarios)
 
-# --- TELA DE BOAS-VINDAS CONDICIONAL ---
+# --- BOAS-VINDAS ---
 if not ocultar_boas_vindas:
-  mensagem_dia = random.choice(t["mensagens"])
-  st.markdown(
-      f"""
+    mensagem_dia = random.choice(t["mensagens"])
+    st.markdown(
+        f"""
         <div class="custom-card">
             <h3 style="margin: 0; color: {t["accent_color"]};">{t["icone"]} Painel Interativo - {tema_escolhido}</h3>
             <p style="font-size: 13px; opacity: 0.8; margin-top: 2px;">📅 Data: <b>{datetime.today().strftime('%d/%m/%Y')}</b></p>
@@ -329,204 +289,164 @@ if not ocultar_boas_vindas:
             <p style="font-size: 14px; margin: 0; font-style: italic;">"{mensagem_dia}"</p>
         </div>
         """,
-      unsafe_allow_html=True,
-  )
+        unsafe_allow_html=True,
+    )
 
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
 
-# --- ABAS OTIMIZADAS PARA CELULAR ---
-aba_lancamento, aba_ranking, aba_admin = st.tabs(
-    ["📝 Registrar", "🏆 Ranking", "⚙️ Gestão"]
-)
+aba_lancamento, aba_ranking, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "⚙️ Gestão"])
 
 with aba_lancamento:
-  st.subheader("Registrar Pontuação")
-  with st.form("form_pontuacao", clear_on_submit=True):
-    lista_nomes = list(integrantes_info.keys())
-    integrante = st.selectbox("Escolha o Integrante:", lista_nomes)
+    st.subheader("Registrar Pontuação por Data")
+    with st.form("form_pontuacao", clear_on_submit=True):
+        lista_nomes = list(integrantes_info.keys())
+        integrante = st.selectbox("Escolha o Integrante:", lista_nomes)
+        data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
+        pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
+        observacao = st.text_input("Observação (Opcional):")
+        enviado = st.form_submit_button("🔥 Registrar Pontuação", use_container_width=True)
 
-    data_lancamento = st.date_input(
-        "Data:", value=datetime.today(), format="DD/MM/YYYY"
-    )
-    pontos = st.number_input(
-        "Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d"
-    )
-    observacao = st.text_input("Observação (Opcional):")
-    enviado = st.form_submit_button(
-        "🔥 Registrar Pontuação", use_container_width=True
-    )
-
-    if enviado:
-      if not integrante:
-        st.warning("Selecione o integrante.")
-      else:
-        nova_linha = pd.DataFrame([{
-            "Data": data_lancamento.strftime("%Y-%m-%d"),
-            "Integrante": integrante,
-            "Pontos": int(pontos),
-            "Observação": observacao if observacao else "",
-        }])
-        df_pontos = pd.concat([df_pontos, nova_linha], ignore_index=True)
-        df_pontos.to_csv(ARQUIVO_DADOS, index=False)
-        st.success("Pontuação registrada com sucesso!")
-        st.rerun()
+        if enviado:
+            if not integrante:
+                st.warning("Selecione o integrante.")
+            else:
+                data_str = data_lancamento.strftime("%Y-%m-%d")
+                
+                # Inicializa a data no dicionário se não existir
+                if data_str not in dados_diarios:
+                    dados_diarios[data_str] = {}
+                
+                # Salva ou atualiza os pontos do integrante para aquela data específica
+                dados_diarios[data_str][integrante] = {
+                    "Pontos": int(pontos),
+                    "Observação": observacao if observacao else ""
+                }
+                
+                salvar_dados_json(dados_diarios)
+                st.success(f"Pontuação de {integrante} salva com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                st.rerun()
 
 with aba_ranking:
-  if not df_pontos.empty:
-    st.subheader("📊 Estatísticas Gerais")
-    total_pontos_geral = df_pontos["Pontos"].sum()
-    maior_pontuacao_dia = df_pontos["Pontos"].max()
+    if not df_pontos.empty:
+        st.subheader("📊 Estatísticas Gerais")
+        total_pontos_geral = df_pontos["Pontos"].sum()
+        maior_pontuacao_dia = df_pontos["Pontos"].max()
 
-    c1, c2 = st.columns(2)
-    c1.metric("Pontos Acumulados", f"{int(total_pontos_geral)} pts")
-    c2.metric("Recorde Diário", f"{int(maior_pontuacao_dia)} pts")
+        c1, c2 = st.columns(2)
+        c1.metric("Pontos Acumulados", f"{int(total_pontos_geral)} pts")
+        c2.metric("Recorde Diário", f"{int(maior_pontuacao_dia)} pts")
 
-    st.markdown("---")
-    st.subheader("🥇 Hierarquia Atual")
+        st.markdown("---")
+        st.subheader("🥇 Hierarquia Atual")
 
-    ranking_geral = (
-        df_pontos.groupby("Integrante")
-        .agg(
-            Total_Pontos=("Pontos", "sum"),
-            Dias_Trabalhados=("Pontos", "count"),
+        ranking_geral = (
+            df_pontos.groupby("Integrante")
+            .agg(
+                Total_Pontos=("Pontos", "sum"),
+                Dias_Trabalhados=("Data", "nunique"),
+            )
+            .reset_index()
         )
-        .reset_index()
-    )
 
-    ranking_geral = ranking_geral.sort_values(
-        by="Total_Pontos", ascending=False
-    ).reset_index(drop=True)
-    ranking_geral.index = ranking_geral.index + 1
-    ranking_geral.index.name = "Posição"
-    ranking_geral = ranking_geral.reset_index()
+        ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
+        ranking_geral.index = ranking_geral.index + 1
+        ranking_geral.index.name = "Posição"
+        ranking_geral = ranking_geral.reset_index()
 
-    # Adiciona a coluna de Avatar e Patente
-    ranking_geral["Avatar"] = ranking_geral["Integrante"].apply(
-        lambda x: integrantes_info.get(x, {}).get("Avatar", "👤 Participante")
-    )
-    ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(
-        lambda x: obter_classificacao(x, t["patentes"])
-    )
+        ranking_geral["Avatar"] = ranking_geral["Integrante"].apply(
+            lambda x: integrantes_info.get(x, {}).get("Avatar", "👤 Participante")
+        )
+        ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(
+            lambda x: obter_classificacao(x, t["patentes"])
+        )
 
-    df_exibicao = df_pontos.copy()
-    df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime(
-        "%d/%m/%Y"
-    )
+        df_exibicao = df_pontos.copy()
+        df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
 
-    tabela_exib = ranking_geral[
-        ["Posição", "Avatar", "Integrante", "Total_Pontos", "Patente"]
-    ].rename(columns={"Total_Pontos": "Total"})
-    st.dataframe(tabela_exib, use_container_width=True)
+        tabela_exib = ranking_geral[["Posição", "Avatar", "Integrante", "Total_Pontos", "Patente"]].rename(columns={"Total_Pontos": "Total"})
+        st.dataframe(tabela_exib, use_container_width=True)
 
-    st.markdown("### 📈 Gráfico de Pontuação")
+        st.markdown("### 📈 Gráfico de Pontuação")
+        chart_data = ranking_geral.set_index("Integrante")["Total_Pontos"]
+        st.bar_chart(chart_data)
 
-    # Gráfico de barras usando Altair ou Streamlit nativo mapeando as cores personalizadas
-    chart_data = ranking_geral.set_index("Integrante")["Total_Pontos"]
-    st.bar_chart(chart_data)
-
-    st.markdown("---")
-    st.subheader("📋 Livro de Registros Recentes")
-    st.dataframe(
-        df_exibicao.sort_values(by="Data", ascending=False),
-        use_container_width=True,
-    )
-  else:
-    st.info("Nenhum registo encontrado ainda.")
+        st.markdown("---")
+        st.subheader("📋 Livro de Registros Recentes")
+        st.dataframe(df_exibicao.sort_values(by="Data", ascending=False), use_container_width=True)
+    else:
+        st.info("Nenhum registo encontrado ainda.")
 
 with aba_admin:
-  st.subheader("➕ Adicionar Novo Integrante")
-  with st.form("form_novo_integrante", clear_on_submit=True):
-    novo_nome = st.text_input("Nome:")
-    novo_avatar = st.selectbox("Escolha o Avatar:", LISTA_AVATARES)
-    nova_cor = st.color_picker("Cor de Destaque da Barra:", t["accent_color"])
-    cadastrar_btn = st.form_submit_button(
-        "Cadastrar Integrante", use_container_width=True
-    )
+    st.subheader("➕ Adicionar Novo Integrante")
+    with st.form("form_novo_integrante", clear_on_submit=True):
+        novo_nome = st.text_input("Nome:")
+        novo_avatar = st.selectbox("Escolha o Avatar:", LISTA_AVATARES)
+        nova_cor = st.color_picker("Cor de Destaque da Barra:", t["accent_color"])
+        cadastrar_btn = st.form_submit_button("Cadastrar Integrante", use_container_width=True)
 
-    if cadastrar_btn:
-      if novo_nome.strip():
-        if novo_nome.strip() in integrantes_info:
-          st.warning("Este integrante já existe!")
-        else:
-          salvar_integrante(novo_nome.strip(), nova_cor, novo_avatar)
-          st.success(f"{novo_nome.strip()} cadastrado com sucesso!")
-          st.rerun()
-      else:
-        st.warning("Digite um nome válido.")
+        if cadastrar_btn:
+            if novo_nome.strip():
+                if novo_nome.strip() in integrantes_info:
+                    st.warning("Este integrante já existe!")
+                else:
+                    salvar_integrante(novo_nome.strip(), nova_cor, novo_avatar)
+                    st.success(f"{novo_nome.strip()} cadastrado com sucesso!")
+                    st.rerun()
+            else:
+                st.warning("Digite um nome válido.")
 
-  st.markdown("---")
-  st.subheader("🎨 Personalizar Integrantes Existentes")
-  integrante_edit = st.selectbox(
-      "Selecione o Integrante para Editar:", list(integrantes_info.keys())
-  )
-  if integrante_edit:
-    info_atual = integrantes_info[integrante_edit]
-    with st.form("form_edicao_integrante"):
-      avatar_edit = st.selectbox(
-          "Novo Avatar:",
-          LISTA_AVATARES,
-          index=(
-              LISTA_AVATARES.index(info_atual["Avatar"])
-              if info_atual["Avatar"] in LISTA_AVATARES
-              else 0
-          ),
-      )
-      cor_edit = st.color_picker("Nova Cor da Barra:", info_atual["Cor"])
-      salvar_edicao = st.form_submit_button(
-          "Atualizar Integrante", use_container_width=True
-      )
-
-      if salvar_edicao:
-        salvar_integrante(integrante_edit, cor_edit, avatar_edit)
-        st.success(f"Dados de {integrante_edit} atualizados com sucesso!")
-        st.rerun()
-
-  st.markdown("---")
-  if st.button("🎉 Apurar Campeão da Semana", use_container_width=True):
-    if df_pontos.empty:
-      st.warning("Sem pontuações para apurar!")
+    st.markdown("---")
+    st.subheader("🏆 Apuração da Semana")
+    
+    if not df_pontos.empty:
+        df_temp = df_pontos.copy()
+        df_temp["Data_Parsed"] = pd.to_datetime(df_temp["Data"], errors="coerce")
+        df_temp["Ano_Semana"] = df_temp["Data_Parsed"].apply(
+            lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else ""
+        )
+        semanas_disponiveis = sorted(df_temp["Ano_Semana"].unique(), reverse=True)
     else:
-      df_pontos["Data_Parsed"] = pd.to_datetime(
-          df_pontos["Data"], errors="coerce"
-      )
-      hoje = datetime.today()
-      ano_atual, semana_atual, _ = hoje.isocalendar()
-      chave_semana = f"Ano {ano_atual} - Semana {semana_atual}"
+        semanas_disponiveis = []
 
-      df_pontos["Ano_Semana"] = df_pontos["Data_Parsed"].apply(
-          lambda x: (
-              f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}"
-              if pd.notnull(x)
-              else ""
-          )
-      )
-      df_semana_atual = df_pontos[df_pontos["Ano_Semana"] == chave_semana]
+    hoje = datetime.today()
+    ano_atual, semana_atual, _ = hoje.isocalendar()
+    semana_padrao_str = f"Ano {ano_atual} - Semana {semana_atual}"
 
-      if df_semana_atual.empty:
-        st.warning(
-            f"Nenhum lançamento encontrado na semana ({chave_semana})."
-        )
-      else:
-        ranking_semana = (
-            df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
-        )
-        ranking_semana = ranking_semana.sort_values(
-            by="Pontos", ascending=False
-        ).reset_index(drop=True)
-        campeao = ranking_semana.iloc[0]["Integrante"]
-        pontos_campeao = ranking_semana.iloc[0]["Pontos"]
+    if semana_padrao_str not in semanas_disponiveis and semanas_disponiveis:
+        semana_selecionada = st.selectbox("Escolha a Semana para Apuração:", semanas_disponiveis)
+    elif semanas_disponiveis:
+        semana_selecionada = st.selectbox("Escolha a Semana para Apuração:", semanas_disponiveis, index=semanas_disponiveis.index(semana_padrao_str))
+    else:
+        semana_selecionada = semana_padrao_str
 
-        historico = carregar_historico_json()
-        historico[chave_semana] = {
-            "campeao": campeao,
-            "pontos": int(pontos_campeao),
-            "ranking_completo": ranking_semana.to_dict(orient="records"),
-            "data_apuracao": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        }
-        salvar_historico_json(historico)
-        st.balloons()
-        st.success(
-            f"👑 O(A) grande campeão(ã) da semana é {campeao} com"
-            f" {int(pontos_campeao)} pts!"
-        )
+    if st.button("🎉 Apurar Campeão da Semana Selecionada", use_container_width=True):
+        if df_pontos.empty:
+            st.warning("Sem pontuações para apurar!")
+        else:
+            df_pontos["Data_Parsed"] = pd.to_datetime(df_pontos["Data"], errors="coerce")
+            df_pontos["Ano_Semana"] = df_pontos["Data_Parsed"].apply(
+                lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else ""
+            )
+            df_semana_atual = df_pontos[df_pontos["Ano_Semana"] == semana_selecionada]
+
+            if df_semana_atual.empty:
+                st.warning(f"Nenhum lançamento encontrado na semana ({semana_selecionada}).")
+            else:
+                ranking_semana = (
+                    df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
+                )
+                ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
+                campeao = ranking_semana.iloc[0]["Integrante"]
+                pontos_campeao = ranking_semana.iloc[0]["Pontos"]
+
+                historico = carregar_historico_json()
+                historico[semana_selecionada] = {
+                    "campeao": campeao,
+                    "pontos": int(pontos_campeao),
+                    "ranking_completo": ranking_semana.to_dict(orient="records"),
+                    "data_apuracao": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                }
+                salvar_historico_json(historico)
+                st.balloons()
+                st.success(f"👑 O(A) grande campeão(ã) da {semana_selecionada} é {campeao} com {int(pontos_campeao)} pts!")
