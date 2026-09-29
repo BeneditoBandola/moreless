@@ -59,7 +59,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -142,13 +142,22 @@ st.markdown(
         background-color: {t["input_bg"]} !important;
         color: {t["input_text"]} !important;
     }}
-    /* Estilo para alinhar perfeitamente os blocos do pódio */
+    /* Força proporção exata e alinhamento perfeito no pódio */
     .podium-box {{
         display: flex;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        min-height: 220px;
+        justify-content: flex-start;
+        height: 240px;
+    }}
+    .podium-avatar {{
+        width: 75px !important;
+        height: 75px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        border: 3px solid #FFD700;
+        margin: 5px auto;
     }}
     </style>
 """,
@@ -382,15 +391,15 @@ with aba_podio:
             with cols[i - 1]:
                 dados = p[i]
                 st.markdown("<div class='podium-box'>", unsafe_allow_html=True)
-                st.markdown(f"<h4 style='color: #FFD700; margin-bottom: 8px;'>{titulos_colunas[i]}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color: #FFD700; margin-bottom: 5px; height: 30px; display: flex; align-items: center; justify-content: center;'>{titulos_colunas[i]}</h4>", unsafe_allow_html=True)
                 
                 if dados["foto"] and os.path.exists(dados["foto"]):
-                    st.image(dados["foto"], width=80)
+                    st.image(dados["foto"], width=75)
                 else:
-                    st.markdown("<div style='font-size: 40px;'>👤</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size: 40px; height: 75px; display: flex; align-items: center; justify-content: center;'>👤</div>", unsafe_allow_html=True)
                 
-                st.markdown(f"<h3 style='color: {dados['cor']}; margin: 8px 0 4px 0;'>{dados['nome']}</h3>", unsafe_allow_html=True)
-                st.markdown(f"<h4 style='margin: 0;'>{dados['pontos']} pts</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='color: {dados['cor']}; margin: 5px 0; height: 35px; display: flex; align-items: center; justify-content: center;'>{dados['nome']}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='margin: 0; height: 30px; display: flex; align-items: center; justify-content: center;'>{dados['pontos']} pts</h4>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("Nenhum dado disponível para montar o pódio.")
