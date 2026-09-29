@@ -142,23 +142,6 @@ st.markdown(
         background-color: {t["input_bg"]} !important;
         color: {t["input_text"]} !important;
     }}
-    /* Força proporção exata e alinhamento perfeito no pódio */
-    .podium-box {{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        justify-content: flex-start;
-        height: 240px;
-    }}
-    .podium-avatar {{
-        width: 75px !important;
-        height: 75px !important;
-        border-radius: 50% !important;
-        object-fit: cover !important;
-        border: 3px solid #FFD700;
-        margin: 5px auto;
-    }}
     </style>
 """,
     unsafe_allow_html=True,
@@ -384,23 +367,25 @@ with aba_podio:
                 "cor": integrantes_info.get(row["Integrante"], {}).get("Cor", t["accent_color"])
             }
 
-        cols = st.columns(min(5, len(p)))
         titulos_colunas = {1: "🥇 1º Lugar", 2: "🥈 2º Lugar", 3: "🥉 3º Lugar", 4: "4º Lugar", 5: "5º Lugar"}
 
+        # Exibição em formato de linhas horizontais unificadas (perfeitamente alinhadas)
         for i in range(1, len(p) + 1):
-            with cols[i - 1]:
-                dados = p[i]
-                st.markdown("<div class='podium-box'>", unsafe_allow_html=True)
-                st.markdown(f"<h4 style='color: #FFD700; margin-bottom: 5px; height: 30px; display: flex; align-items: center; justify-content: center;'>{titulos_colunas[i]}</h4>", unsafe_allow_html=True)
-                
+            dados = p[i]
+            col_pos, col_foto, col_nome, col_pts = st.columns([1.5, 1, 3, 2])
+            
+            with col_pos:
+                st.markdown(f"<h4 style='color: #FFD700; margin-top: 15px;'>{titulos_colunas[i]}</h4>", unsafe_allow_html=True)
+            with col_foto:
                 if dados["foto"] and os.path.exists(dados["foto"]):
-                    st.image(dados["foto"], width=75)
+                    st.image(dados["foto"], width=65)
                 else:
-                    st.markdown("<div style='font-size: 40px; height: 75px; display: flex; align-items: center; justify-content: center;'>👤</div>", unsafe_allow_html=True)
-                
-                st.markdown(f"<h3 style='color: {dados['cor']}; margin: 5px 0; height: 35px; display: flex; align-items: center; justify-content: center;'>{dados['nome']}</h3>", unsafe_allow_html=True)
-                st.markdown(f"<h4 style='margin: 0; height: 30px; display: flex; align-items: center; justify-content: center;'>{dados['pontos']} pts</h4>", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size: 35px;'>👤</div>", unsafe_allow_html=True)
+            with col_nome:
+                st.markdown(f"<h3 style='color: {dados['cor']}; margin-top: 15px;'>{dados['nome']}</h3>", unsafe_allow_html=True)
+            with col_pts:
+                st.markdown(f"<h3 style='margin-top: 15px; text-align: right;'>{dados['pontos']} pts</h3>", unsafe_allow_html=True)
+            st.divider()
     else:
         st.info("Nenhum dado disponível para montar o pódio.")
 
