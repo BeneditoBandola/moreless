@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import os
 import random
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -58,7 +59,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -150,7 +151,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Nomes exatos com cores dedicadas e caminhos automáticos para as fotos na pasta
+# Nomes exatos com cores dedicadas e caminhos para as fotos na pasta
 INTEGRANTES_PADRAO = {
     "Bárbara": {"Cor": "#DB2777", "Foto": os.path.join(PASTA_FOTOS, "Barbara.jpg")},
     "Benedito": {"Cor": "#2563EB", "Foto": os.path.join(PASTA_FOTOS, "Benedito.jpg")},
@@ -324,6 +325,11 @@ with aba_ranking:
             lambda x: obter_classificacao(x, t["patentes"])
         )
 
+        # Adiciona a cor de cada integrante no dataframe para uso no gráfico
+        ranking_geral["Cor"] = ranking_geral["Integrante"].apply(
+            lambda x: integrantes_info.get(x, {}).get("Cor", t["accent_color"])
+        )
+
         # Exibição personalizada com cores e fotos reais de cada integrante
         for idx, row in ranking_geral.iterrows():
             nome_int = row["Integrante"]
@@ -348,9 +354,17 @@ with aba_ranking:
                 st.markdown(f"### **{int(total_pts)} pts**")
             st.divider()
 
-        st.markdown("### 📈 Gráfico de Pontuação")
-        chart_data = ranking_geral.set_index("Integrante")["Total_Pontos"]
-        st.bar_chart(chart_data)
+        st.markdown("### 📈 Gráfico de Pontuação Personalizado")
+        
+        # Gráfico de barras com cores individuais usando Altair
+        chart = alt.Chart(ranking_geral).mark_bar().encode(
+            x=alt.X('Integrante:N', sort='-y', title='Integrante'),
+            y=alt.Y('Total_Pontos:Q', title='Pontos Totais'),
+            color=alt.Color('Integrante:N', scale=alt.Scale(domain=list(ranking_geral['Integrante']), range=list(ranking_geral['Cor'])), legend=None),
+            tooltip=['Integrante', 'Total_Pontos', 'Patente']
+        ).properties(height=300)
+        
+        st.altair_chart(chart, use_container_width=True)
 
         st.markdown("---")
         st.subheader("📋 Livro de Registros Recentes")
