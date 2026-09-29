@@ -59,7 +59,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -141,16 +141,6 @@ st.markdown(
     input, select, textarea {{
         background-color: {t["input_bg"]} !important;
         color: {t["input_text"]} !important;
-    }}
-    /* Estilo para padronizar as fotos do pódio em tamanho fixo e redondas */
-    .podium-img {{
-        width: 75px;
-        height: 75px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #FFD700;
-        display: block;
-        margin: 0 auto;
     }}
     </style>
 """,
@@ -368,9 +358,6 @@ with aba_podio:
             .reset_index(drop=True)
         )
 
-        total_participantes = len(ranking_podio)
-
-        # Mapeia os 5 primeiros (com segurança caso haja menos de 5)
         p = {}
         for idx, row in ranking_podio.head(5).iterrows():
             p[idx + 1] = {
@@ -382,33 +369,28 @@ with aba_podio:
 
         # Ordem visual clássica de pódio de corrida: 2º, 1º, 3º, 4º, 5º
         ordem_podio = [2, 1, 3, 4, 5]
-        
         cols = st.columns(5)
         
         for i, pos_alvo in enumerate(ordem_podio):
             with cols[i]:
                 if pos_alvo in p:
                     dados = p[pos_alvo]
-                    
-                    # Alturas personalizadas para simular os degraus do pódio
                     alturas_degrau = {1: "180px", 2: "130px", 3: "90px", 4: "60px", 5: "40px"}
                     medalhas = {1: "🥇 1º", 2: "🥈 2º", 3: "🥉 3º", 4: "4º", 5: "5º"}
                     
-                    # Exibe a foto em cima com proporção idêntica
+                    # Exibe a foto em cima com tamanho fixo e uniforme
                     if dados["foto"] and os.path.exists(dados["foto"]):
-                        st.markdown(f'<img src="data:image/jpeg;base64,{base64_encode(dados["foto"])}" class="podium-img">', unsafe_allow_html=True)
-                        # Nota: Se preferir usar o nativo do streamlit garantindo proporção:
-                        # st.image(dados["foto"], width=75)
+                        st.image(dados["foto"], width=70)
                     else:
                         st.markdown("<div style='text-align: center; font-size: 30px;'>👤</div>", unsafe_allow_html=True)
                     
                     st.markdown(f"<h5 style='color: {dados['cor']}; text-align: center; margin: 5px 0;'>{dados['nome']}</h5>", unsafe_allow_html=True)
                     st.markdown(f"<p style='text-align: center; font-size: 13px; margin: 0;'>{dados['pontos']} pts</p>", unsafe_allow_html=True)
                     
-                    # Bloco visual do degrau
+                    # Bloco visual do degrau do pódio
                     st.markdown(f"""
                         <div style='background: {dados['cor']}; height: {alturas_degrau[pos_alvo]}; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: center; margin-top: 10px;'>
-                            <b style='color: white; font-size: 18px;'>{medalhas[pos_alvo]}</b>
+                            <b style='color: white; font-size: 16px;'>{medalhas[pos_alvo]}</b>
                         </div>
                     """, unsafe_allow_html=True)
                 else:
