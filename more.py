@@ -59,7 +59,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -151,7 +151,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Nomes exatos com cores dedicadas e caminhos para as fotos na pasta
 INTEGRANTES_PADRAO = {
     "Bárbara": {"Cor": "#DB2777", "Foto": os.path.join(PASTA_FOTOS, "Barbara.jpg")},
     "Benedito": {"Cor": "#2563EB", "Foto": os.path.join(PASTA_FOTOS, "Benedito.jpg")},
@@ -264,7 +263,7 @@ if not ocultar_boas_vindas:
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
 
-aba_lancamento, aba_ranking, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "⚙️ Gestão"])
+aba_lancamento, aba_ranking, aba_podio, aba_admin = st.tabs(["📝 Registrar", "🏆 Ranking", "🥇 Pódio", "⚙️️ Gestão"])
 
 with aba_lancamento:
     st.subheader("Registrar Pontuação por Data")
@@ -324,13 +323,10 @@ with aba_ranking:
         ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(
             lambda x: obter_classificacao(x, t["patentes"])
         )
-
-        # Adiciona a cor de cada integrante no dataframe para uso no gráfico
         ranking_geral["Cor"] = ranking_geral["Integrante"].apply(
             lambda x: integrantes_info.get(x, {}).get("Cor", t["accent_color"])
         )
 
-        # Exibição personalizada com cores e fotos reais de cada integrante
         for idx, row in ranking_geral.iterrows():
             nome_int = row["Integrante"]
             total_pts = row["Total_Pontos"]
@@ -355,8 +351,6 @@ with aba_ranking:
             st.divider()
 
         st.markdown("### 📈 Gráfico de Pontuação Personalizado")
-        
-        # Gráfico de barras com cores individuais usando Altair
         chart = alt.Chart(ranking_geral).mark_bar().encode(
             x=alt.X('Integrante:N', sort='-y', title='Integrante'),
             y=alt.Y('Total_Pontos:Q', title='Pontos Totais'),
@@ -374,7 +368,73 @@ with aba_ranking:
     else:
         st.info("Nenhum registo encontrado ainda.")
 
+with aba_podio:
+    st.subheader("🏆 Pódio Geral - Se terminasse hoje")
+    if not df_pontos.empty:
+        ranking_podio = (
+            df_pontos.groupby("Integrante")["Pontos"].sum().reset_index()
+            .sort_values(by="Pontos", ascending=False)
+            .reset_index(drop=True)
+        )
+
+        # Garante até 5 lugares no pódio
+        cols = st.columns(min(5, len(ranking_podio)))
+        medalhas = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+
+        for i, row in ranking_podio.head(5).iterrows():
+            nome = row["Integrante"]
+            pts = row["Pontos"]
+            info = integrantes_info.get(nome, {})
+            foto = info.get("Foto", "")
+            cor = info.get("Cor", t["accent_color"])
+
+            with cols[i]:
+                st.markdown(f"### {medalhas[i]}")
+                if foto and os.path.exists(foto):
+                    st.image(foto, width=80)
+                else:
+                    st.markdown("👤")
+                st.markdown(f"<h4 style='color: {cor}; text-align: center;'>{nome}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align: center; font-weight: bold;'>{int(pts)} pts</p>", unsafe_allow_html=True)
+    else:
+        st.info("Nenhum dado disponível para montar o pódio.")
+
 with aba_admin:
+    st.subheader("⚙️ Configuração e Gestão de Fotos e Cores")
+    
+    st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
+    integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
+    
+    if integrante_foto_sel:
+        info_sel = integrantes_info[integrante_foto_sel]
+        col_atual, col_up = st.columns([1, 2])
+        
+        with col_atual:
+            st.write("Foto Atual:")
+            if info_sel.get("Foto") and os.path.exists(info_sel["Foto"]):
+                st.image(info_sel["Foto"], width=100)
+            else:
+                st.markdown("Nenhuma foto cadastrada.")
+                
+        with col_up:
+            with st.form(f"form_foto_{integrante_foto_sel}"):
+                nova_foto_file = st.file_uploader("Enviar Nova Foto (JPG/PNG):", type=["png", "jpg", "jpeg"])
+                nova_cor_picker = st.color_picker("Cor de Destaque:", info_sel.get("Cor", "#2563EB"))
+                btn_salvar_foto = st.form_submit_button("Salvar Alterações", use_container_width=True)
+                
+                if btn_salvar_foto:
+                    caminho_salvo = info_sel.get("Foto", "")
+                    if nova_foto_file is not None:
+                        # Salva com nome limpo baseado no integrante
+                        caminho_salvo = os.path.join(PASTA_FOTOS, f"{integrante_foto_sel}.jpg")
+                        with open(caminho_salvo, "wb") as f:
+                            f.write(nova_foto_file.getbuffer())
+                    
+                    salvar_integrante(integrante_foto_sel, nova_cor_picker, caminho_salvo)
+                    st.success(f"Configurações de {integrante_foto_sel} atualizadas com sucesso!")
+                    st.rerun()
+
+    st.markdown("---")
     st.subheader("➕ Adicionar Novo Integrante")
     with st.form("form_novo_integrante", clear_on_submit=True):
         novo_nome = st.text_input("Nome:")
@@ -398,30 +458,6 @@ with aba_admin:
                     st.rerun()
             else:
                 st.warning("Digite um nome válido.")
-
-    st.markdown("---")
-    st.subheader("🎨 Atualizar Cor e Foto dos Integrantes")
-    integrante_edit = st.selectbox("Selecione o Integrante para Editar:", list(integrantes_info.keys()))
-    if integrante_edit:
-        info_atual = integrantes_info[integrante_edit]
-        if info_atual.get("Foto") and os.path.exists(info_atual["Foto"]):
-            st.image(info_atual["Foto"], width=70)
-
-        with st.form("form_edicao_integrante"):
-            nova_foto_edit = st.file_uploader("Nova Foto (PNG/JPG):", type=["png", "jpg", "jpeg"])
-            cor_edit = st.color_picker("Cor da Barra/Nome:", info_atual.get("Cor", t["accent_color"]))
-            salvar_edicao = st.form_submit_button("Atualizar Integrante", use_container_width=True)
-
-            if salvar_edicao:
-                caminho_foto_salva = info_atual.get("Foto", "")
-                if nova_foto_edit is not None:
-                    caminho_foto_salva = os.path.join(PASTA_FOTOS, f"{integrante_edit}.jpg")
-                    with open(caminho_foto_salva, "wb") as f:
-                        f.write(nova_foto_edit.getbuffer())
-
-                salvar_integrante(integrante_edit, cor_edit, caminho_foto_salva)
-                st.success(f"Dados de {integrante_edit} atualizados com sucesso!")
-                st.rerun()
 
     st.markdown("---")
     st.subheader("🏆 Apuração e Resumo Diário da Semana")
