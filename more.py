@@ -15,45 +15,11 @@ st.set_page_config(
 ARQUIVO_DADOS_JSON = "dados_diarios.json"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
 ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
+PASTA_FOTOS = "fotos_integrantes"
 
-# --- LISTA EXTENSA DE AVATARES DIVERTIDOS ---
-LISTA_AVATARES = [
-    "👰 Noivinha Clássica",
-    "🤵 Noivo Elegante",
-    "💍 Aliança de Ouro",
-    "💐 Bouquet de Flores",
-    "💒 Capela dos Sonhos",
-    "👽 ET Cinzento",
-    "🛸 Disco Voador",
-    "🤖 Robô Cibernético",
-    "🪐 Planeta Anelado",
-    "🚀 Foguete Espacial",
-    "🌌 Mestre Jedi",
-    "⚔️ Cavaleiro Sith",
-    "🛡️ Caçador de Recompensas",
-    "🪐 Piloto Estelar",
-    "🔮 Mago Supremo",
-    "🧞 Gênio da Lâmpada",
-    "🧞‍♂️ Espírito Mágico",
-    "🧚 Fada Madrinha",
-    "🧙 Mago das Fórmulas",
-    "🦄 Unicórnio Mágico",
-    "🍌 Minion Maluco",
-    "👾 Monstrinho Pixel",
-    "👻 Fantasminha Camarada",
-    "🦸 Super-Herói",
-    "🦹 Super-Vilão",
-    "🐐 Cabrito Sagrado",
-    "🐎 Égua Veloz",
-    "🐴 Mula Carinhosa",
-    "🦁 Leão Corajoso",
-    "🦊 Raposa Astuta",
-    "👑 Rei do Trono",
-    "💼 Diretor Executivo",
-    "☕ Xícara de Café",
-    "💻 Hacker da Madrugada",
-    "💀 Caveira Estilosa",
-]
+# Garante que a pasta de fotos existe
+if not os.path.exists(PASTA_FOTOS):
+    os.makedirs(PASTA_FOTOS)
 
 PATENTES_ORIGINAIS = {
     100: "👑 Deus Supremo",
@@ -92,7 +58,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -185,36 +151,38 @@ st.markdown(
 )
 
 INTEGRANTES_PADRAO = {
-    "Benedito": {"Cor": "#2563EB", "Avatar": "👑 Rei do Trono"},
-    "Bárbara": {"Cor": "#DB2777", "Avatar": "👰 Noivinha Clássica"},
-    "Vinícius": {"Cor": "#059669", "Avatar": "👽 ET Cinzento"},
-    "Samuel": {"Cor": "#D97706", "Avatar": "🌌 Mestre Jedi"},
-    "Gabrielle": {"Cor": "#8B5CF6", "Avatar": "🧞 Gênio da Lâmpada"},
-    "Tuane": {"Cor": "#0891B2", "Avatar": "🍌 Minion Maluco"},
+    "Benedito": {"Cor": "#2563EB", "Foto": ""},
+    "Bárbara": {"Cor": "#DB2777", "Foto": ""},
+    "Vinícius": {"Cor": "#059669", "Foto": ""},
+    "Samuel": {"Cor": "#D97706", "Foto": ""},
+    "Gabrielle": {"Cor": "#8B5CF6", "Foto": ""},
+    "Tuane": {"Cor": "#0891B2", "Foto": ""},
 }
 
 
 def carregar_integrantes():
     if os.path.exists(ARQUIVO_INTEGRANTES):
         df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
-        if "Avatar" not in df_int.columns:
-            df_int["Avatar"] = "👤 Participante"
+        if "Avatar" in df_int.columns and "Foto" not in df_int.columns:
+            df_int = df_int.rename(columns={"Avatar": "Foto"})
+        if "Foto" not in df_int.columns:
+            df_int["Foto"] = ""
         return df_int.set_index("Nome").to_dict(orient="index")
     else:
         dados_lista = []
         for nome, info in INTEGRANTES_PADRAO.items():
-            dados_lista.append({"Nome": nome, "Cor": info["Cor"], "Avatar": info["Avatar"]})
+            dados_lista.append({"Nome": nome, "Cor": info["Cor"], "Foto": info["Foto"]})
         df_int = pd.DataFrame(dados_lista)
         df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
         return df_int.set_index("Nome").to_dict(orient="index")
 
 
-def salvar_integrante(nome, cor, avatar):
+def salvar_integrante(nome, cor, caminho_foto):
     integrantes_dict = carregar_integrantes()
-    integrantes_dict[nome] = {"Cor": cor, "Avatar": avatar}
+    integrantes_dict[nome] = {"Cor": cor, "Foto": caminho_foto}
     dados_lista = []
     for n, info in integrantes_dict.items():
-        dados_lista.append({"Nome": n, "Cor": info["Cor"], "Avatar": info["Avatar"]})
+        dados_lista.append({"Nome": n, "Cor": info["Cor"], "Foto": info.get("Foto", "")})
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
@@ -300,6 +268,13 @@ with aba_lancamento:
     with st.form("form_pontuacao", clear_on_submit=True):
         lista_nomes = list(integrantes_info.keys())
         integrante = st.selectbox("Escolha o Integrante:", lista_nomes)
+        
+        # Exibe a foto pequena do integrante selecionado no formulário se houver
+        if integrante in integrantes_info and integrantes_info[integrante].get("Foto"):
+            foto_path = integrantes_info[integrante]["Foto"]
+            if os.path.exists(foto_path):
+                st.image(foto_path, width=80)
+
         data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
         pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
         observacao = st.text_input("Observação (Opcional):")
@@ -345,18 +320,31 @@ with aba_ranking:
         ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
         ranking_geral["Posição"] = ranking_geral.index + 1
 
-        ranking_geral["Avatar"] = ranking_geral["Integrante"].apply(
-            lambda x: integrantes_info.get(x, {}).get("Avatar", "👤 Participante")
-        )
         ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(
             lambda x: obter_classificacao(x, t["patentes"])
         )
 
-        df_exibicao = df_pontos.copy()
-        df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
+        # Exibição visual personalizada em cards ou tabela limpa com destaque para fotos
+        for idx, row in ranking_geral.iterrows():
+            nome_int = row["Integrante"]
+            total_pts = row["Total_Pontos"]
+            patente = row["Patente"]
+            pos = row["Posição"]
+            info_int = integrantes_info.get(nome_int, {})
+            foto = info_int.get("Foto", "")
 
-        tabela_exib = ranking_geral[["Posição", "Avatar", "Integrante", "Total_Pontos", "Patente"]].rename(columns={"Total_Pontos": "Total"}).reset_index(drop=True)
-        st.dataframe(tabela_exib, use_container_width=True)
+            col_foto, col_info, col_pts = st.columns([1, 4, 2])
+            with col_foto:
+                if foto and os.path.exists(foto):
+                    st.image(foto, width=50)
+                else:
+                    st.markdown("👤")
+            with col_info:
+                st.markdown(f"**#{pos} - {nome_int}**")
+                st.caption(f"Patente: {patente}")
+            with col_pts:
+                st.markdown(f"### **{int(total_pts)} pts**")
+            st.divider()
 
         st.markdown("### 📈 Gráfico de Pontuação")
         chart_data = ranking_geral.set_index("Integrante")["Total_Pontos"]
@@ -364,6 +352,8 @@ with aba_ranking:
 
         st.markdown("---")
         st.subheader("📋 Livro de Registros Recentes")
+        df_exibicao = df_pontos.copy()
+        df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
         st.info("Nenhum registo encontrado ainda.")
@@ -372,8 +362,8 @@ with aba_admin:
     st.subheader("➕ Adicionar Novo Integrante")
     with st.form("form_novo_integrante", clear_on_submit=True):
         novo_nome = st.text_input("Nome:")
-        novo_avatar = st.selectbox("Escolha o Avatar:", LISTA_AVATARES)
-        nova_cor = st.color_picker("Cor de Destaque da Barra:", t["accent_color"])
+        nova_cor = st.color_picker("Cor de Destaque:", t["accent_color"])
+        arquivo_foto = st.file_uploader("Carregar Foto (PNG/JPG):", type=["png", "jpg", "jpeg"])
         cadastrar_btn = st.form_submit_button("Cadastrar Integrante", use_container_width=True)
 
         if cadastrar_btn:
@@ -381,11 +371,41 @@ with aba_admin:
                 if novo_nome.strip() in integrantes_info:
                     st.warning("Este integrante já existe!")
                 else:
-                    salvar_integrante(novo_nome.strip(), nova_cor, novo_avatar)
+                    caminho_foto_salva = ""
+                    if arquivo_foto is not None:
+                        caminho_foto_salva = os.path.join(PASTA_FOTOS, f"{novo_nome.strip()}.jpg")
+                        with open(caminho_foto_salva, "wb") as f:
+                            f.write(arquivo_foto.getbuffer())
+                    
+                    salvar_integrante(novo_nome.strip(), nova_cor, caminho_foto_salva)
                     st.success(f"{novo_nome.strip()} cadastrado com sucesso!")
                     st.rerun()
             else:
                 st.warning("Digite um nome válido.")
+
+    st.markdown("---")
+    st.subheader("🎨 Atualizar Foto de Integrantes Existentes")
+    integrante_edit = st.selectbox("Selecione o Integrante para Editar:", list(integrantes_info.keys()))
+    if integrante_edit:
+        info_atual = integrantes_info[integrante_edit]
+        if info_atual.get("Foto") and os.path.exists(info_atual["Foto"]):
+            st.image(info_atual["Foto"], width=70)
+
+        with st.form("form_edicao_integrante"):
+            nova_foto_edit = st.file_uploader("Nova Foto (PNG/JPG):", type=["png", "jpg", "jpeg"])
+            cor_edit = st.color_picker("Cor da Barra:", info_atual.get("Cor", t["accent_color"]))
+            salvar_edicao = st.form_submit_button("Atualizar Integrante", use_container_width=True)
+
+            if salvar_edicao:
+                caminho_foto_salva = info_atual.get("Foto", "")
+                if nova_foto_edit is not None:
+                    caminho_foto_salva = os.path.join(PASTA_FOTOS, f"{integrante_edit}.jpg")
+                    with open(caminho_foto_salva, "wb") as f:
+                        f.write(nova_foto_edit.getbuffer())
+
+                salvar_integrante(integrante_edit, cor_edit, caminho_foto_salva)
+                st.success(f"Dados de {integrante_edit} atualizados com sucesso!")
+                st.rerun()
 
     st.markdown("---")
     st.subheader("🏆 Apuração e Resumo Diário da Semana")
