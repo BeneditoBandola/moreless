@@ -58,7 +58,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -150,13 +150,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Nomes exatos com cores dedicadas e caminhos automáticos para as fotos na pasta
 INTEGRANTES_PADRAO = {
-    "Benedito": {"Cor": "#2563EB", "Foto": ""},
-    "Bárbara": {"Cor": "#DB2777", "Foto": ""},
-    "Vinícius": {"Cor": "#059669", "Foto": ""},
-    "Samuel": {"Cor": "#D97706", "Foto": ""},
-    "Gabrielle": {"Cor": "#8B5CF6", "Foto": ""},
-    "Tuane": {"Cor": "#0891B2", "Foto": ""},
+    "Bárbara": {"Cor": "#DB2777", "Foto": os.path.join(PASTA_FOTOS, "Barbara.jpg")},
+    "Benedito": {"Cor": "#2563EB", "Foto": os.path.join(PASTA_FOTOS, "Benedito.jpg")},
+    "Samuel": {"Cor": "#D97706", "Foto": os.path.join(PASTA_FOTOS, "Samuel.jpg")},
+    "Vinícius": {"Cor": "#059669", "Foto": os.path.join(PASTA_FOTOS, "Vinicius.jpg")},
+    "Gabrielle": {"Cor": "#8B5CF6", "Foto": os.path.join(PASTA_FOTOS, "Gabrielle.jpg")},
 }
 
 
@@ -167,6 +167,8 @@ def carregar_integrantes():
             df_int = df_int.rename(columns={"Avatar": "Foto"})
         if "Foto" not in df_int.columns:
             df_int["Foto"] = ""
+        if "Cor" not in df_int.columns:
+            df_int["Cor"] = "#2563EB"
         return df_int.set_index("Nome").to_dict(orient="index")
     else:
         dados_lista = []
@@ -182,7 +184,7 @@ def salvar_integrante(nome, cor, caminho_foto):
     integrantes_dict[nome] = {"Cor": cor, "Foto": caminho_foto}
     dados_lista = []
     for n, info in integrantes_dict.items():
-        dados_lista.append({"Nome": n, "Cor": info["Cor"], "Foto": info.get("Foto", "")})
+        dados_lista.append({"Nome": n, "Cor": info.get("Cor", "#2563EB"), "Foto": info.get("Foto", "")})
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
@@ -269,7 +271,6 @@ with aba_lancamento:
         lista_nomes = list(integrantes_info.keys())
         integrante = st.selectbox("Escolha o Integrante:", lista_nomes)
         
-        # Exibe a foto pequena do integrante selecionado no formulário se houver
         if integrante in integrantes_info and integrantes_info[integrante].get("Foto"):
             foto_path = integrantes_info[integrante]["Foto"]
             if os.path.exists(foto_path):
@@ -319,28 +320,29 @@ with aba_ranking:
 
         ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
         ranking_geral["Posição"] = ranking_geral.index + 1
-
         ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(
             lambda x: obter_classificacao(x, t["patentes"])
         )
 
-        # Exibição visual personalizada em cards ou tabela limpa com destaque para fotos
+        # Exibição personalizada com cores e fotos reais de cada integrante
         for idx, row in ranking_geral.iterrows():
             nome_int = row["Integrante"]
             total_pts = row["Total_Pontos"]
             patente = row["Patente"]
             pos = row["Posição"]
+            
             info_int = integrantes_info.get(nome_int, {})
             foto = info_int.get("Foto", "")
+            cor_int = info_int.get("Cor", t["accent_color"])
 
             col_foto, col_info, col_pts = st.columns([1, 4, 2])
             with col_foto:
                 if foto and os.path.exists(foto):
-                    st.image(foto, width=50)
+                    st.image(foto, width=55)
                 else:
                     st.markdown("👤")
             with col_info:
-                st.markdown(f"**#{pos} - {nome_int}**")
+                st.markdown(f"<h4 style='color: {cor_int}; margin: 0;'>#{pos} - {nome_int}</h4>", unsafe_allow_html=True)
                 st.caption(f"Patente: {patente}")
             with col_pts:
                 st.markdown(f"### **{int(total_pts)} pts**")
@@ -384,7 +386,7 @@ with aba_admin:
                 st.warning("Digite um nome válido.")
 
     st.markdown("---")
-    st.subheader("🎨 Atualizar Foto de Integrantes Existentes")
+    st.subheader("🎨 Atualizar Cor e Foto dos Integrantes")
     integrante_edit = st.selectbox("Selecione o Integrante para Editar:", list(integrantes_info.keys()))
     if integrante_edit:
         info_atual = integrantes_info[integrante_edit]
@@ -393,7 +395,7 @@ with aba_admin:
 
         with st.form("form_edicao_integrante"):
             nova_foto_edit = st.file_uploader("Nova Foto (PNG/JPG):", type=["png", "jpg", "jpeg"])
-            cor_edit = st.color_picker("Cor da Barra:", info_atual.get("Cor", t["accent_color"]))
+            cor_edit = st.color_picker("Cor da Barra/Nome:", info_atual.get("Cor", t["accent_color"]))
             salvar_edicao = st.form_submit_button("Atualizar Integrante", use_container_width=True)
 
             if salvar_edicao:
