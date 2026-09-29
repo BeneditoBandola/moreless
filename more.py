@@ -59,7 +59,7 @@ TEMAS = {
         "patentes": PATENTES_ORIGINAIS,
         "mensagens": [
             "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos una para sempre no altar!",
+            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
             "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
         ],
     },
@@ -288,7 +288,7 @@ with aba_ranking:
         c2.metric("Recorde Diário", f"{int(maior_pontuacao_dia)} pts")
 
         st.markdown("---")
-        st.subheader("🥇 Hierarquia Atual")
+        st.subheader("🥇 Ranking Atual")
 
         ranking_geral = (
             df_pontos.groupby("Integrante")
@@ -321,14 +321,14 @@ with aba_ranking:
             col_foto, col_info, col_pts = st.columns([1, 4, 2])
             with col_foto:
                 if foto and os.path.exists(foto):
-                    st.image(foto, width=55)
+                    st.image(foto, width=70)
                 else:
                     st.markdown("👤")
             with col_info:
-                st.markdown(f"<h4 style='color: {cor_int}; margin: 0;'>#{pos} - {nome_int}</h4>", unsafe_allow_html=True)
-                st.caption(f"Patente: {patente}")
+                st.markdown(f"<h3 style='color: {cor_int}; margin: 0;'>#{pos} - {nome_int}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size: 15px; margin: 2px 0;'>Patente: <b>{patente}</b></p>", unsafe_allow_html=True)
             with col_pts:
-                st.markdown(f"### **{int(total_pts)} pts**")
+                st.markdown(f"<h2 style='margin: 0; text-align: right;'>{int(total_pts)} pts</h2>", unsafe_allow_html=True)
             st.divider()
 
         st.markdown("### 📈 Gráfico de Pontuação Personalizado")
@@ -350,7 +350,7 @@ with aba_ranking:
         st.info("Nenhum registo encontrado ainda.")
 
 with aba_podio:
-    st.subheader("🏆 Pódio Oficial - Se terminasse hoje")
+    st.subheader("🏆 Ranking Atual - Pódio")
     if not df_pontos.empty:
         ranking_podio = (
             df_pontos.groupby("Integrante")["Pontos"].sum().reset_index()
@@ -367,34 +367,21 @@ with aba_podio:
                 "cor": integrantes_info.get(row["Integrante"], {}).get("Cor", t["accent_color"])
             }
 
-        # Ordem visual clássica de pódio de corrida: 2º, 1º, 3º, 4º, 5º
-        ordem_podio = [2, 1, 3, 4, 5]
-        cols = st.columns(5)
-        
-        for i, pos_alvo in enumerate(ordem_podio):
-            with cols[i]:
-                if pos_alvo in p:
-                    dados = p[pos_alvo]
-                    alturas_degrau = {1: "180px", 2: "130px", 3: "90px", 4: "60px", 5: "40px"}
-                    medalhas = {1: "🥇 1º", 2: "🥈 2º", 3: "🥉 3º", 4: "4º", 5: "5º"}
-                    
-                    # Exibe a foto em cima com tamanho fixo e uniforme
-                    if dados["foto"] and os.path.exists(dados["foto"]):
-                        st.image(dados["foto"], width=70)
-                    else:
-                        st.markdown("<div style='text-align: center; font-size: 30px;'>👤</div>", unsafe_allow_html=True)
-                    
-                    st.markdown(f"<h5 style='color: {dados['cor']}; text-align: center; margin: 5px 0;'>{dados['nome']}</h5>", unsafe_allow_html=True)
-                    st.markdown(f"<p style='text-align: center; font-size: 13px; margin: 0;'>{dados['pontos']} pts</p>", unsafe_allow_html=True)
-                    
-                    # Bloco visual do degrau do pódio
-                    st.markdown(f"""
-                        <div style='background: {dados['cor']}; height: {alturas_degrau[pos_alvo]}; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: center; margin-top: 10px;'>
-                            <b style='color: white; font-size: 16px;'>{medalhas[pos_alvo]}</b>
-                        </div>
-                    """, unsafe_allow_html=True)
+        # Versão clássica limpa lado a lado para o pódio
+        cols = st.columns(min(5, len(p)))
+        medalhas = {1: "🥇 1º Lugar", 2: "🥈 2º Lugar", 3: "🥉 3º Lugar", 4: "4º Lugar", 5: "5º Lugar"}
+
+        for i in range(1, len(p) + 1):
+            with cols[i - 1]:
+                dados = p[i]
+                st.markdown(f"<h4 style='text-align: center; color: #FFD700;'>{medalhas[i]}</h4>", unsafe_allow_html=True)
+                if dados["foto"] and os.path.exists(dados["foto"]):
+                    st.image(dados["foto"], width=90)
                 else:
-                    st.markdown("<div style='text-align: center; color: gray; margin-top: 50px;'>-</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align: center; font-size: 40px;'>👤</div>", unsafe_allow_html=True)
+                
+                st.markdown(f"<h3 style='color: {dados['cor']}; text-align: center; margin: 8px 0;'>{dados['nome']}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='text-align: center; margin: 0;'>{dados['pontos']} pts</h4>", unsafe_allow_html=True)
     else:
         st.info("Nenhum dado disponível para montar o pódio.")
 
