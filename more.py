@@ -355,8 +355,8 @@ with aba_ranking:
         df_exibicao = df_pontos.copy()
         df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
 
-        tabela_exib = ranking_geral[["Posição", "Avatar", "Integrante", "Total_Pontos", "Patente"]].rename(columns={"Total_Pontos": "Total"})
-        st.dataframe(tabela_exib, use_container_width=True, index=False)
+        tabela_exib = ranking_geral[["Posição", "Avatar", "Integrante", "Total_Pontos", "Patente"]].rename(columns={"Total_Pontos": "Total"}).reset_index(drop=True)
+        st.dataframe(tabela_exib, use_container_width=True)
 
         st.markdown("### 📈 Gráfico de Pontuação")
         chart_data = ranking_geral.set_index("Integrante")["Total_Pontos"]
@@ -364,7 +364,7 @@ with aba_ranking:
 
         st.markdown("---")
         st.subheader("📋 Livro de Registros Recentes")
-        st.dataframe(df_exibicao.sort_values(by="Data", ascending=False), use_container_width=True, index=False)
+        st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
         st.info("Nenhum registo encontrado ainda.")
 
