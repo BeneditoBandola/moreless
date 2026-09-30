@@ -342,9 +342,40 @@ with aba_podio:
         st.info("Nenhum dado disponível para montar o pódio.")
 
 with aba_admin:
-    st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
+    st.subheader("⚙️ Configuração, Gestão e Backups")
     
-    st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
+    # --- BOTÕES DE BACKUP ---
+    st.markdown("### 💾 Gestão de Ficheiro de Dados (Backup)")
+    col_dl, col_ul = st.columns(2)
+    
+    with col_dl:
+        st.write("Guardar dados atuais no PC:")
+        if ARQUIVO_DADOS_CSV.exists():
+            with open(ARQUIVO_DADOS_CSV, "rb") as f:
+                st.download_button(
+                    label="📥 Baixar Backup (CSV)",
+                    data=f,
+                    file_name="banco_dados.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+        else:
+            st.info("Ainda sem dados para baixar.")
+            
+    with col_ul:
+        st.write("Restaurar / Enviar dados anteriores:")
+        arquivo_upload = st.file_uploader("Carregar 'banco_dados.csv':", type=["csv"])
+        if arquivo_upload is not None:
+            try:
+                df_up = pd.read_csv(arquivo_upload)
+                df_up.to_csv(ARQUIVO_DADOS_CSV, index=False)
+                st.success("Dados restaurados com sucesso! Recarregue a página.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao carregar ficheiro: {e}")
+
+    st.markdown("---")
+    st.subheader("🖼️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
     if integrante_foto_sel:
