@@ -157,7 +157,7 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS VIA GSPREAD ---
+# --- CONEXÃO COM GOOGLE SHEETS COM DIAGNÓSTICO ---
 @st.cache_resource
 def conectar_gsheets():
     try:
@@ -167,6 +167,7 @@ def conectar_gsheets():
         sh = gc.open(nome_planilha)
         return sh.sheet1
     except Exception as e:
+        st.error(f"ERRO DE CONEXÃO COM O GOOGLE SHEETS: {e}")
         return None
 
 def carregar_dados_planilha():
@@ -312,7 +313,7 @@ with aba_ranking:
         df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
-        st.info("Nenhum registo encontrado na planilha do Google Sheets.")
+        st.info("Nenhum registo encontrado na planilha do Google Sheets. Insira dados na planilha ou use a aba 'Registrar'.")
 
 with aba_podio:
     st.subheader("🏆 Ranking Atual - Pódio")
@@ -356,7 +357,7 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
-    st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
+    st.markdown("### 🖼️️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
     if integrante_foto_sel:
