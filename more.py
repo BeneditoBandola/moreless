@@ -157,12 +157,21 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS COM DIAGNÓSTICO ---
+# --- CONEXÃO COM GOOGLE SHEETS VIA FICHEIRO JSON LOCAL ---
 @st.cache_resource
 def conectar_gsheets():
     try:
-        secrets_dict = dict(st.secrets["gcp_service_account"])
-        gc = gspread.service_account_from_dict(secrets_dict)
+        import google.oauth2.service_account
+        scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        
+        caminho_json = PASTA_SCRIPT / "credentials.json"
+        if not caminho_json.exists():
+            st.error("Ficheiro 'credentials.json' não encontrado na pasta do projeto!")
+            return None
+            
+        creds = google.oauth2.service_account.Credentials.from_service_account_file(str(caminho_json), scopes=scope)
+        gc = gspread.authorize(creds)
+        
         nome_planilha = st.secrets.get("spreadsheet", "BancoDados_Multitemas")
         sh = gc.open(nome_planilha)
         return sh.sheet1
@@ -313,7 +322,7 @@ with aba_ranking:
         df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
-        st.info("Nenhum registo encontrado na planilha do Google Sheets. Insira dados na planilha ou use a aba 'Registrar'.")
+        st.info("Nenhum registo encontrado na planilha do Google Sheets.")
 
 with aba_podio:
     st.subheader("🏆 Ranking Atual - Pódio")
@@ -357,7 +366,7 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
-    st.markdown("### 🖼️️ Gerenciar Fotos dos Integrantes")
+    st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
     if integrante_foto_sel:
