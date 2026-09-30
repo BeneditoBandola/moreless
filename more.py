@@ -157,21 +157,12 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS VIA credentials.json LOCAL ---
+# --- CONEXÃO COM GOOGLE SHEETS VIA SECRETS ---
 @st.cache_resource
 def conectar_gsheets():
     try:
-        import google.oauth2.service_account
-        scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-        
-        caminho_json = PASTA_SCRIPT / "credentials.json"
-        if not caminho_json.exists():
-            st.error("ERRO: O ficheiro 'credentials.json' não foi enviado para a raiz do repositório no GitHub!")
-            return None
-            
-        creds = google.oauth2.service_account.Credentials.from_service_account_file(str(caminho_json), scopes=scope)
-        gc = gspread.authorize(creds)
-        
+        secrets_dict = dict(st.secrets["gcp_service_account"])
+        gc = gspread.service_account_from_dict(secrets_dict)
         nome_planilha = st.secrets.get("spreadsheet", "BancoDados_Multitemas")
         sh = gc.open(nome_planilha)
         return sh.sheet1
@@ -366,7 +357,7 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
-    st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
+    st.markdown("### 🖼️️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
     if integrante_foto_sel:
@@ -412,7 +403,7 @@ with aba_admin:
                 else:
                     caminho_foto_salva = ""
                     if arquivo_foto is not None:
-                        caminho_foto_salva = str(PASTA_FOTOS / f"{novo_nome.strip()}.jpg")
+                        caminho_foto_salva = str(PASTA_FOS / f"{novo_nome.strip()}.jpg") if 'PASTA_FOS' in globals() else str(PASTA_FOTOS / f"{novo_nome.strip()}.jpg")
                         with open(caminho_foto_salva, "wb") as f:
                             f.write(arquivo_foto.getbuffer())
                     
