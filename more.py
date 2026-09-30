@@ -4,9 +4,9 @@ import os
 from pathlib import Path
 import random
 import altair as alt
+import gspread
 import pandas as pd
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -158,66 +158,51 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS ---
+# --- CONEXÃO COM GOOGLE SHEETS VIA GSPREAD ---
 @st.cache_resource
-def get_gsheets_connection():
-    return st.connection("gsheets", type=GSheetsConnection)
+def conectar_gsheets():
+    try:
+        secrets_dict = dict(st.secrets["gcp_service_account"])
+        gc = gspread.service_account_from_dict(secrets_dict)
+        nome_planilha = st.secrets.get("spreadsheet", "BancoDados_Multitemas")
+        sh = gc.open(nome_planilha)
+        return sh.sheet1
+    except Exception as e:
+        return None
 
 def carregar_dados_planilha():
     try:
-        conn = get_gsheets_connection()
-        # Lê a planilha vinculada
-        df = conn.read(ttl=0)
-        if df.empty or not all(col in df.columns for col in ["Data", "Integrante", "Pontos"]):
+        sheet = conectar_gsheets()
+        if sheet is None:
             return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="fill").fillna(0).astype(int)
+        
+        dados = sheet.get_all_records()
+        if not dados:
+            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+            
+        df = pd.DataFrame(dados)
+        if not all(col in df.columns for col in ["Data", "Integrante", "Pontos"]):
+            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+            
+        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
         df["Observação"] = df["Observação"].fillna("").astype(str)
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
         return df.dropna(subset=["Data", "Integrante"])
     except Exception as e:
-        st.error(f"Erro ao ler do Google Sheets: {e}")
         return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
 
 def salvar_registro_planilha(data_str, integrante, pontos, observacao):
     try:
-        conn = get_gsheets_connection()
-        df_atual = conn.read(ttl=0)
-        
-        # Garante colunas base
-        if df_atual.empty or not all(col in df_atual.columns for col in ["Data", "Integrante", "Pontos", "Observação"]):
-            df_atual = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+        sheet = conectar_gsheets()
+        if sheet is None:
+            return False
             
-        # Remove se já existir lançamento para o mesmo dia e integrante (para atualizar em vez de duplicar)
-        df_atual["Data"] = pd.to_datetime(df_atual["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
-        df_atual = df_atual[~((df_atual["Data"] == data_str) & (df_atual["Integrante"] == integrante))]
-        
-        # Adiciona a nova linha
-        novo_registro = pd.DataFrame([{
-            "Data": data_str,
-            "Integrante": integrante,
-            "Pontos": int(pontos),
-            "Observação": str(observacao)
-        }])
-        
-        df_atual = pd.concat([df_atual, novo_registro], ignore_index=True)
-        conn.update(data=df_atual)
+        # Adiciona a linha diretamente na planilha do Google Sheets
+        sheet.append_row([data_str, integrante, int(pontos), str(observacao)])
         return True
     except Exception as e:
         st.error(f"Erro ao salvar na planilha: {e}")
         return False
-
-def carregar_historico_json():
-    if ARQUIVO_HISTORICO_JSON.exists():
-        with open(ARQUIVO_HISTORICO_JSON, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except:
-                return {}
-    return {}
-
-def salvar_historico_json(historico):
-    with open(ARQUIVO_HISTORICO_JSON, "w", encoding="utf-8") as f:
-        json.dump(historico, f, ensure_ascii=False, indent=4)
 
 def obter_classificacao(pontos, patentes):
     for limite in sorted(patentes.keys(), reverse=True):
@@ -257,7 +242,6 @@ with aba_lancamento:
                 sucesso = salvar_registro_planilha(data_str, integrante, pontos, observacao)
                 if sucesso:
                     st.success(f"Pontuação de {integrante} salva na nuvem com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
-                    time.sleep(1)
                     st.rerun()
 
 with aba_ranking:
