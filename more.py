@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import random
 import altair as alt
-import gspread
 import pandas as pd
 import streamlit as st
 
@@ -17,6 +16,7 @@ st.set_page_config(
 
 PASTA_SCRIPT = Path(__file__).resolve().parent
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
+ARQUIVO_DADOS_CSV = PASTA_SCRIPT / "dados_diarios.csv"
 PASTA_FOTOS = PASTA_SCRIPT / "fotos_integrantes"
 
 if not PASTA_FOTOS.exists():
@@ -157,49 +157,38 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS VIA GSPREAD ---
-@st.cache_resource
-def conectar_gsheets():
-    try:
-        secrets_dict = dict(st.secrets["gcp_service_account"])
-        gc = gspread.service_account_from_dict(secrets_dict)
-        nome_planilha = st.secrets.get("spreadsheet", "BancoDados_Multitemas")
-        sh = gc.open(nome_planilha)
-        return sh.sheet1
-    except Exception as e:
-        return None
+# --- GERENCIAMENTO DE DADOS LOCAIS (CSV SEGURO) ---
+def carregar_dados_csv():
+    if ARQUIVO_DADOS_CSV.exists():
+        try:
+            df = pd.read_csv(ARQUIVO_DADOS_CSV)
+            if df.empty or not all(col in df.columns for col in ["Data", "Integrante", "Pontos", "Observação"]):
+                return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+            df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
+            df["Observação"] = df["Observação"].fillna("").astype(str)
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
+            return df.dropna(subset=["Data", "Integrante"])
+        except:
+            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+    else:
+        df_padrao = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+        df_padrao.to_csv(ARQUIVO_DADOS_CSV, index=False)
+        return df_padrao
 
-def carregar_dados_planilha():
+def salvar_registro_csv(data_str, integrante, pontos, observacao):
     try:
-        sheet = conectar_gsheets()
-        if sheet is None:
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-        
-        dados = sheet.get_all_records()
-        if not dados:
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-            
-        df = pd.DataFrame(dados)
-        if not all(col in df.columns for col in ["Data", "Integrante", "Pontos"]):
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-            
-        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
-        df["Observação"] = df["Observação"].fillna("").astype(str)
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
-        return df.dropna(subset=["Data", "Integrante"])
-    except Exception as e:
-        return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-
-def salvar_registro_planilha(data_str, integrante, pontos, observacao):
-    try:
-        sheet = conectar_gsheets()
-        if sheet is None:
-            return False
-            
-        sheet.append_row([data_str, integrante, int(pontos), str(observacao)])
+        df_atual = carregar_dados_csv()
+        novo_registro = pd.DataFrame([{
+            "Data": data_str,
+            "Integrante": integrante,
+            "Pontos": int(pontos),
+            "Observação": str(observacao)
+        }])
+        df_atual = pd.concat([df_atual, novo_registro], ignore_index=True)
+        df_atual.to_csv(ARQUIVO_DADOS_CSV, index=False)
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar na planilha: {e}")
+        st.error(f"Erro ao salvar: {e}")
         return False
 
 def obter_classificacao(pontos, patentes):
@@ -209,7 +198,7 @@ def obter_classificacao(pontos, patentes):
     return list(patentes.values())[-1]
 
 integrantes_info = carregar_integrantes()
-df_pontos = carregar_dados_planilha()
+df_pontos = carregar_dados_csv()
 
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
@@ -237,9 +226,9 @@ with aba_lancamento:
                 st.warning("Selecione o integrante.")
             else:
                 data_str = data_lancamento.strftime("%Y-%m-%d")
-                sucesso = salvar_registro_planilha(data_str, integrante, pontos, observacao)
+                sucesso = salvar_registro_csv(data_str, integrante, pontos, observacao)
                 if sucesso:
-                    st.success(f"Pontuação de {integrante} salva no Google Sheets com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                    st.success(f"Pontuação de {integrante} salva com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                     st.rerun()
 
 with aba_ranking:
@@ -312,7 +301,7 @@ with aba_ranking:
         df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
-        st.info("Nenhum registo encontrado na planilha do Google Sheets.")
+        st.info("Nenhum registo encontrado ainda.")
 
 with aba_podio:
     st.subheader("🏆 Ranking Atual - Pódio")
