@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import os
+from pathlib import Path
 import random
 import altair as alt
 import pandas as pd
@@ -13,15 +14,18 @@ st.set_page_config(
     layout="centered",
 )
 
-ARQUIVO_DADOS_JSON = "dados_diarios.json"
-ARQUIVO_BACKUP_JSON = "dados_diarios_backup.json"
-ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
-ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
-PASTA_FOTOS = "fotos_integrantes"
+# Caminho absoluto da pasta raiz onde o script está localizado
+PASTA_SCRIPT = Path(__file__).resolve().parent
 
-# Garante que a pasta de fotos existe
-if not os.path.exists(PASTA_FOTOS):
-    os.makedirs(PASTA_FOTOS)
+ARQUIVO_DADOS_JSON = PASTA_SCRIPT / "dados_diarios.json"
+ARQUIVO_BACKUP_JSON = PASTA_SCRIPT / "dados_diarios_backup.json"
+ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
+ARQUIVO_HISTORICO_JSON = PASTA_SCRIPT / "historico_semanas.json"
+PASTA_FOTOS = PASTA_SCRIPT / "fotos_integrantes"
+
+# Garante que a pasta de fotos existe na raiz
+if not PASTA_FOTOS.exists():
+    PASTA_FOTOS.mkdir(parents=True, exist_ok=True)
 
 PATENTES_ORIGINAIS = {
     100: "👑 Deus Supremo",
@@ -149,15 +153,15 @@ st.markdown(
 )
 
 INTEGRANTES_PADRAO = {
-    "Bárbara": {"Cor": "#DB2777", "Foto": os.path.join(PASTA_FOTOS, "Barbara.jpg")},
-    "Benedito": {"Cor": "#2563EB", "Foto": os.path.join(PASTA_FOTOS, "Benedito.jpg")},
-    "Samuel": {"Cor": "#D97706", "Foto": os.path.join(PASTA_FOTOS, "Samuel.jpg")},
-    "Vinícius": {"Cor": "#059669", "Foto": os.path.join(PASTA_FOTOS, "Vinicius.jpg")},
-    "Gabrielle": {"Cor": "#8B5CF6", "Foto": os.path.join(PASTA_FOTOS, "Gabrielle.jpg")},
+    "Bárbara": {"Cor": "#DB2777", "Foto": str(PASTA_FOTOS / "Barbara.jpg")},
+    "Benedito": {"Cor": "#2563EB", "Foto": str(PASTA_FOTOS / "Benedito.jpg")},
+    "Samuel": {"Cor": "#D97706", "Foto": str(PASTA_FOTOS / "Samuel.jpg")},
+    "Vinícius": {"Cor": "#059669", "Foto": str(PASTA_FOTOS / "Vinicius.jpg")},
+    "Gabrielle": {"Cor": "#8B5CF6", "Foto": str(PASTA_FOTOS / "Gabrielle.jpg")},
 }
 
 def carregar_integrantes():
-    if os.path.exists(ARQUIVO_INTEGRANTES):
+    if ARQUIVO_INTEGRANTES.exists():
         df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
         if "Avatar" in df_int.columns and "Foto" not in df_int.columns:
             df_int = df_int.rename(columns={"Avatar": "Foto"})
@@ -184,18 +188,16 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
 def carregar_dados_json():
-    # Tenta carregar o principal
-    if os.path.exists(ARQUIVO_DADOS_JSON):
+    if ARQUIVO_DADOS_JSON.exists():
         with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
             try:
                 dados = json.load(f)
-                if dados:  # Se não estiver vazio, retorna
+                if dados:
                     return dados
             except:
                 pass
     
-    # Se falhar ou estiver vazio, tenta carregar o backup automático
-    if os.path.exists(ARQUIVO_BACKUP_JSON):
+    if ARQUIVO_BACKUP_JSON.exists():
         with open(ARQUIVO_BACKUP_JSON, "r", encoding="utf-8") as f:
             try:
                 dados_backup = json.load(f)
@@ -207,11 +209,9 @@ def carregar_dados_json():
     return {}
 
 def salvar_dados_json(dados):
-    # Salva o arquivo principal
     with open(ARQUIVO_DADOS_JSON, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
         
-    # Cria uma cópia de segurança automática imediata (Backup)
     with open(ARQUIVO_BACKUP_JSON, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
@@ -230,7 +230,7 @@ def converter_json_para_dataframe(dados_json):
     return pd.DataFrame(linhas)
 
 def carregar_historico_json():
-    if os.path.exists(ARQUIVO_HISTORICO_JSON):
+    if ARQUIVO_HISTORICO_JSON.exists():
         with open(ARQUIVO_HISTORICO_JSON, "r", encoding="utf-8") as f:
             try:
                 return json.load(f)
@@ -265,7 +265,7 @@ with aba_lancamento:
         
         if integrante in integrantes_info and integrantes_info[integrante].get("Foto"):
             foto_path = integrantes_info[integrante]["Foto"]
-            if os.path.exists(foto_path):
+            if foto_path and Path(foto_path).exists():
                 st.image(foto_path, width=80)
 
         data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
@@ -285,7 +285,7 @@ with aba_lancamento:
                     "Observação": observacao if observacao else ""
                 }
                 salvar_dados_json(dados_diarios)
-                st.success(f"Pontuação de {integrante} salva com segurança para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                st.success(f"Pontuação de {integrante} salva com segurança na raiz para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                 st.rerun()
 
 with aba_ranking:
@@ -331,7 +331,7 @@ with aba_ranking:
 
             col_foto, col_info, col_pts = st.columns([1, 4, 2])
             with col_foto:
-                if foto and os.path.exists(foto):
+                if foto and Path(foto).exists():
                     st.image(foto, width=70)
                 else:
                     st.markdown("👤")
@@ -387,7 +387,7 @@ with aba_podio:
             with col_pos:
                 st.markdown(f"<h4 style='color: #FFD700; margin-top: 15px;'>{titulos_colunas[i]}</h4>", unsafe_allow_html=True)
             with col_foto:
-                if dados["foto"] and os.path.exists(dados["foto"]):
+                if dados["foto"] and Path(dados["foto"]).exists():
                     st.image(dados["foto"], width=65)
                 else:
                     st.markdown("<div style='font-size: 35px;'>👤</div>", unsafe_allow_html=True)
@@ -402,11 +402,10 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
-    # Seção de Backup Manual e Segurança
     st.markdown("### 🛡️ Segurança e Backup dos Dados")
     col_bkp1, col_bkp2 = st.columns(2)
     with col_bkp1:
-        if os.path.exists(ARQUIVO_DADOS_JSON):
+        if ARQUIVO_DADOS_JSON.exists():
             with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
                 json_bytes = f.read()
             st.download_button(
@@ -437,7 +436,7 @@ with aba_admin:
         
         with col_atual:
             st.write("Foto Atual:")
-            if info_sel.get("Foto") and os.path.exists(info_sel["Foto"]):
+            if info_sel.get("Foto") and Path(info_sel["Foto"]).exists():
                 st.image(info_sel["Foto"], width=100)
             else:
                 st.markdown("Nenhuma foto cadastrada.")
@@ -451,7 +450,7 @@ with aba_admin:
                 if btn_salvar_foto:
                     caminho_salvo = info_sel.get("Foto", "")
                     if nova_foto_file is not None:
-                        caminho_salvo = os.path.join(PASTA_FOTOS, f"{integrante_foto_sel}.jpg")
+                        caminho_salvo = str(PASTA_FOTOS / f"{integrante_foto_sel}.jpg")
                         with open(caminho_salvo, "wb") as f:
                             f.write(nova_foto_file.getbuffer())
                     
@@ -474,7 +473,7 @@ with aba_admin:
                 else:
                     caminho_foto_salva = ""
                     if arquivo_foto is not None:
-                        caminho_foto_salva = os.path.join(PASTA_FOTOS, f"{novo_nome.strip()}.jpg")
+                        caminho_foto_salva = str(PASTA_FOTOS / f"{novo_nome.strip()}.jpg")
                         with open(caminho_foto_salva, "wb") as f:
                             f.write(arquivo_foto.getbuffer())
                     
@@ -483,88 +482,3 @@ with aba_admin:
                     st.rerun()
             else:
                 st.warning("Digite um nome válido.")
-
-    st.markdown("---")
-    st.subheader("🏆 Apuração e Resumo Diário da Semana")
-    
-    if not df_pontos.empty:
-        df_temp = df_pontos.copy()
-        df_temp["Data_Parsed"] = pd.to_datetime(df_temp["Data"], errors="coerce")
-        df_temp["Ano_Semana"] = df_temp["Data_Parsed"].apply(
-            lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else ""
-        )
-        semanas_disponiveis = sorted(df_temp["Ano_Semana"].unique(), reverse=True)
-    else:
-        semanas_disponiveis = []
-
-    hoje = datetime.today()
-    ano_atual, semana_atual, _ = hoje.isocalendar()
-    semana_padrao_str = f"Ano {ano_atual} - Semana {semana_atual}"
-
-    if semana_padrao_str not in semanas_disponiveis and semanas_disponiveis:
-        semana_selecionada = st.selectbox("Escolha a Semana para Apuração:", semanas_disponiveis)
-    elif semanas_disponiveis:
-        semana_selecionada = st.selectbox("Escolha a Semana para Apuração:", semanas_disponiveis, index=semanas_disponiveis.index(semana_padrao_str))
-    else:
-        semana_selecionada = semana_padrao_str
-
-    if st.button("📊 Gerar Relatório Detalhado da Semana", use_container_width=True):
-        if df_pontos.empty:
-            st.warning("Sem pontuações para exibir!")
-        else:
-            df_pontos["Data_Parsed"] = pd.to_datetime(df_pontos["Data"], errors="coerce")
-            df_pontos["Ano_Semana"] = df_pontos["Data_Parsed"].apply(
-                lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else ""
-            )
-            df_semana = df_pontos[df_pontos["Ano_Semana"] == semana_selecionada].copy()
-
-            if df_semana.empty:
-                st.warning(f"Nenhum lançamento encontrado na semana ({semana_selecionada}).")
-            else:
-                df_semana["Data_Formatada"] = df_semana["Data_Parsed"].dt.strftime("%d/%m (%a)")
-
-                tabela_detalhada = df_semana.pivot_table(
-                    index="Integrante", 
-                    columns="Data_Formatada", 
-                    values="Pontos", 
-                    aggfunc="sum", 
-                    fill_value=0
-                )
-
-                tabela_detalhada["Total Semana"] = tabela_detalhada.sum(axis=1)
-                tabela_detalhada = tabela_detalhada.sort_values(by="Total Semana", ascending=False)
-
-                st.markdown(f"### Detalhe por Dia - {semana_selecionada}")
-                st.dataframe(tabela_detalhada, use_container_width=True)
-
-                campeao = tabela_detalhada.index[0]
-                pontos_campeao = tabela_detalhada.iloc[0]["Total Semana"]
-
-                st.success(f"👑 **Vencedor(a) da Semana:** {campeao} com um total de **{int(pontos_campeao)} pts**!")
-
-    st.markdown("---")
-    if st.button("🎉 Salvar Campeão da Semana no Histórico", use_container_width=True):
-        if not df_pontos.empty:
-            df_temp = df_pontos.copy()
-            df_temp["Data_Parsed"] = pd.to_datetime(df_temp["Data"], errors="coerce")
-            df_temp["Ano_Semana"] = df_temp["Data_Parsed"].apply(
-                lambda x: f"Ano {x.isocalendar()[0]} - Semana {x.isocalendar()[1]}" if pd.notnull(x) else ""
-            )
-            df_semana_atual = df_temp[df_temp["Ano_Semana"] == semana_selecionada]
-
-            if not df_semana_atual.empty:
-                ranking_semana = df_semana_atual.groupby("Integrante")["Pontos"].sum().reset_index()
-                ranking_semana = ranking_semana.sort_values(by="Pontos", ascending=False).reset_index(drop=True)
-                campeao = ranking_semana.iloc[0]["Integrante"]
-                pontos_campeao = ranking_semana.iloc[0]["Pontos"]
-
-                historico = carregar_historico_json()
-                historico[semana_selecionada] = {
-                    "campeao": campeao,
-                    "pontos": int(pontos_campeao),
-                    "ranking_completo": ranking_semana.to_dict(orient="records"),
-                    "data_apuracao": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                }
-                salvar_historico_json(historico)
-                st.balloons()
-                st.success(f"Campeão da {semana_selecionada} guardado com sucesso no histórico!")
