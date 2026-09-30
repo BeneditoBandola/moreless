@@ -186,7 +186,9 @@ def carregar_dados_planilha():
             
         df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
         df["Observação"] = df["Observação"].fillna("").astype(str)
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
+        
+        # Converte a data de forma segura lidando com texto ou formato brasileiro
+        df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
         return df.dropna(subset=["Data", "Integrante"])
     except Exception as e:
         return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
@@ -197,7 +199,6 @@ def salvar_registro_planilha(data_str, integrante, pontos, observacao):
         if sheet is None:
             return False
             
-        # Adiciona a linha diretamente na planilha do Google Sheets
         sheet.append_row([data_str, integrante, int(pontos), str(observacao)])
         return True
     except Exception as e:
