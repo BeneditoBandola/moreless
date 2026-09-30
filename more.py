@@ -157,7 +157,7 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS VIA FICHEIRO JSON LOCAL ---
+# --- CONEXÃO COM GOOGLE SHEETS VIA credentials.json LOCAL ---
 @st.cache_resource
 def conectar_gsheets():
     try:
@@ -166,7 +166,7 @@ def conectar_gsheets():
         
         caminho_json = PASTA_SCRIPT / "credentials.json"
         if not caminho_json.exists():
-            st.error("Ficheiro 'credentials.json' não encontrado na pasta do projeto!")
+            st.error("ERRO: O ficheiro 'credentials.json' não foi enviado para a raiz do repositório no GitHub!")
             return None
             
         creds = google.oauth2.service_account.Credentials.from_service_account_file(str(caminho_json), scopes=scope)
