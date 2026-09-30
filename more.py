@@ -14,6 +14,7 @@ st.set_page_config(
 )
 
 ARQUIVO_DADOS_JSON = "dados_diarios.json"
+ARQUIVO_BACKUP_JSON = "dados_diarios_backup.json"
 ARQUIVO_INTEGRANTES = "integrantes_equipe.csv"
 ARQUIVO_HISTORICO_JSON = "historico_semanas.json"
 PASTA_FOTOS = "fotos_integrantes"
@@ -155,7 +156,6 @@ INTEGRANTES_PADRAO = {
     "Gabrielle": {"Cor": "#8B5CF6", "Foto": os.path.join(PASTA_FOTOS, "Gabrielle.jpg")},
 }
 
-
 def carregar_integrantes():
     if os.path.exists(ARQUIVO_INTEGRANTES):
         df_int = pd.read_csv(ARQUIVO_INTEGRANTES)
@@ -174,7 +174,6 @@ def carregar_integrantes():
         df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
         return df_int.set_index("Nome").to_dict(orient="index")
 
-
 def salvar_integrante(nome, cor, caminho_foto):
     integrantes_dict = carregar_integrantes()
     integrantes_dict[nome] = {"Cor": cor, "Foto": caminho_foto}
@@ -184,21 +183,37 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-
 def carregar_dados_json():
+    # Tenta carregar o principal
     if os.path.exists(ARQUIVO_DADOS_JSON):
         with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
             try:
-                return json.load(f)
+                dados = json.load(f)
+                if dados:  # Se não estiver vazio, retorna
+                    return dados
             except:
-                return {}
+                pass
+    
+    # Se falhar ou estiver vazio, tenta carregar o backup automático
+    if os.path.exists(ARQUIVO_BACKUP_JSON):
+        with open(ARQUIVO_BACKUP_JSON, "r", encoding="utf-8") as f:
+            try:
+                dados_backup = json.load(f)
+                if dados_backup:
+                    return dados_backup
+            except:
+                pass
+                
     return {}
 
-
 def salvar_dados_json(dados):
+    # Salva o arquivo principal
     with open(ARQUIVO_DADOS_JSON, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
-
+        
+    # Cria uma cópia de segurança automática imediata (Backup)
+    with open(ARQUIVO_BACKUP_JSON, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=4)
 
 def converter_json_para_dataframe(dados_json):
     linhas = []
@@ -214,7 +229,6 @@ def converter_json_para_dataframe(dados_json):
         return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
     return pd.DataFrame(linhas)
 
-
 def carregar_historico_json():
     if os.path.exists(ARQUIVO_HISTORICO_JSON):
         with open(ARQUIVO_HISTORICO_JSON, "r", encoding="utf-8") as f:
@@ -224,18 +238,15 @@ def carregar_historico_json():
                 return {}
     return {}
 
-
 def salvar_historico_json(historico):
     with open(ARQUIVO_HISTORICO_JSON, "w", encoding="utf-8") as f:
         json.dump(historico, f, ensure_ascii=False, indent=4)
-
 
 def obter_classificacao(pontos, patentes):
     for limite in sorted(patentes.keys(), reverse=True):
         if pontos >= limite:
             return patentes[limite]
     return list(patentes.values())[-1]
-
 
 integrantes_info = carregar_integrantes()
 dados_diarios = carregar_dados_json()
@@ -274,7 +285,7 @@ with aba_lancamento:
                     "Observação": observacao if observacao else ""
                 }
                 salvar_dados_json(dados_diarios)
-                st.success(f"Pontuação de {integrante} salva com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                st.success(f"Pontuação de {integrante} salva com segurança para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                 st.rerun()
 
 with aba_ranking:
@@ -369,7 +380,6 @@ with aba_podio:
 
         titulos_colunas = {1: "🥇 1º Lugar", 2: "🥈 2º Lugar", 3: "🥉 3º Lugar", 4: "4º Lugar", 5: "5º Lugar"}
 
-        # Exibição em formato de linhas horizontais unificadas (perfeitamente alinhadas)
         for i in range(1, len(p) + 1):
             dados = p[i]
             col_pos, col_foto, col_nome, col_pts = st.columns([1.5, 1, 3, 2])
@@ -390,8 +400,34 @@ with aba_podio:
         st.info("Nenhum dado disponível para montar o pódio.")
 
 with aba_admin:
-    st.subheader("⚙️ Configuração e Gestão de Fotos e Cores")
+    st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
+    # Seção de Backup Manual e Segurança
+    st.markdown("### 🛡️ Segurança e Backup dos Dados")
+    col_bkp1, col_bkp2 = st.columns(2)
+    with col_bkp1:
+        if os.path.exists(ARQUIVO_DADOS_JSON):
+            with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
+                json_bytes = f.read()
+            st.download_button(
+                label="📥 Baixar Backup do JSON",
+                data=json_bytes,
+                file_name="backup_dados_diarios.json",
+                mime="application/json",
+                use_container_width=True
+            )
+    with col_bkp2:
+        uploaded_backup = st.file_uploader("Restaurar JSON de Backup:", type=["json"])
+        if uploaded_backup is not None:
+            try:
+                dados_restaurados = json.load(uploaded_backup)
+                salvar_dados_json(dados_restaurados)
+                st.success("Dados restaurados com sucesso! Atualizando...")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao ler o arquivo de backup: {e}")
+
+    st.markdown("---")
     st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
