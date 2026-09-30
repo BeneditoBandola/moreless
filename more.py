@@ -342,7 +342,7 @@ with aba_podio:
         st.info("Nenhum dado disponível para montar o pódio.")
 
 with aba_admin:
-    st.subheader("⚙️ Configuração, Gestão e Exclusão de Registros")
+    st.subheader("⚙️️ Configuração, Gestão e Exclusão de Registros")
     
     # --- EXCLUIR LANÇAMENTO ERRADO ---
     st.markdown("### 🗑️ Apagar Lançamento Incorreto")
@@ -354,7 +354,6 @@ with aba_admin:
         
         if st.button("❌ Apagar Registo Selecionado", use_container_width=True):
             idx_escolhido = int(linha_selecionada.split(" - ")[0])
-            # Remove a linha do DataFrame original
             df_novo = df_pontos.drop(df_pontos.index[idx_escolhido]).reset_index(drop=True)
             df_novo.to_csv(ARQUIVO_DADOS_CSV, index=False)
             st.success("Registo apagado com sucesso!")
