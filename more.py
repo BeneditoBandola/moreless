@@ -6,6 +6,7 @@ import random
 import altair as alt
 import pandas as pd
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -14,16 +15,11 @@ st.set_page_config(
     layout="centered",
 )
 
-# Caminho absoluto da pasta raiz onde o script está localizado
 PASTA_SCRIPT = Path(__file__).resolve().parent
-
-ARQUIVO_DADOS_JSON = PASTA_SCRIPT / "dados_diarios.json"
-ARQUIVO_BACKUP_JSON = PASTA_SCRIPT / "dados_diarios_backup.json"
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
 ARQUIVO_HISTORICO_JSON = PASTA_SCRIPT / "historico_semanas.json"
 PASTA_FOTOS = PASTA_SCRIPT / "fotos_integrantes"
 
-# Garante que a pasta de fotos existe na raiz
 if not PASTA_FOTOS.exists():
     PASTA_FOTOS.mkdir(parents=True, exist_ok=True)
 
@@ -46,11 +42,6 @@ TEMAS = {
         "input_text": "#FFFFFF",
         "icone": "💀",
         "patentes": PATENTES_ORIGINAIS,
-        "mensagens": [
-            "As catacumbas guardam os segredos daqueles que não entregaram as metas...",
-            "O roxo da meia-noite cobre os corredores enquanto o sistema aguarda.",
-            "Cuidado com os passos falsos... o coveiro está sempre de olho nos relatórios.",
-        ],
     },
     "👰 Noiva e Casamentos": {
         "bg_app": "#FDF2F8",
@@ -62,11 +53,6 @@ TEMAS = {
         "input_text": "#831843",
         "icone": "👰",
         "patentes": PATENTES_ORIGINAIS,
-        "mensagens": [
-            "Planejando cada detalhe com amor, elegância e foco total nas metas do grande dia.",
-            "Até que o fecho da folha de cálculo nos uma para sempre no altar!",
-            "Um casamento perfeito exige um bouquet lindo, convidados felizes e metas batidas.",
-        ],
     },
     "💖 Meninas e Estilo": {
         "bg_app": "#FFF1F2",
@@ -78,11 +64,6 @@ TEMAS = {
         "input_text": "#4C0519",
         "icone": "💖",
         "patentes": PATENTES_ORIGINAIS,
-        "mensagens": [
-            "Garotas inteligentes conquistam qualquer meta com charme, salto alto e atitude!",
-            "Brilhe muito hoje, coloque o batom favorito e arrase nos resultados.",
-            "Foco, café, look do dia impecável e metas batidas com sucesso!",
-        ],
     },
     "💻 Tecnologia e Cyber": {
         "bg_app": "#030712",
@@ -94,11 +75,6 @@ TEMAS = {
         "input_text": "#FFFFFF",
         "icone": "💻",
         "patentes": PATENTES_ORIGINAIS,
-        "mensagens": [
-            "A executar rotina de otimização de dados... 100% de eficiência concluída.",
-            "O código está limpo, o deploy foi feito com sucesso e o sistema voa.",
-            "Conectado na matrix corporativa, a processar cada desafio com inovação.",
-        ],
     },
     "☕ Escritório Corporativo": {
         "bg_app": "#F8FAFC",
@@ -110,11 +86,6 @@ TEMAS = {
         "input_text": "#1E293B",
         "icone": "☕",
         "patentes": PATENTES_ORIGINAIS,
-        "mensagens": [
-            "Reunião que podia ser um e-mail? Aqui o foco é produtividade real!",
-            "O café quentinho está na chávena e a folha de cálculo aberta para começar o dia.",
-            "Organização, networking e foco nas entregas definem o sucesso de hoje.",
-        ],
     },
 }
 
@@ -187,47 +158,53 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-def carregar_dados_json():
-    if ARQUIVO_DADOS_JSON.exists():
-        with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
-            try:
-                dados = json.load(f)
-                if dados:
-                    return dados
-            except:
-                pass
-    
-    if ARQUIVO_BACKUP_JSON.exists():
-        with open(ARQUIVO_BACKUP_JSON, "r", encoding="utf-8") as f:
-            try:
-                dados_backup = json.load(f)
-                if dados_backup:
-                    return dados_backup
-            except:
-                pass
-                
-    return {}
+# --- CONEXÃO COM GOOGLE SHEETS ---
+@st.cache_resource
+def get_gsheets_connection():
+    return st.connection("gsheets", type=GSheetsConnection)
 
-def salvar_dados_json(dados):
-    with open(ARQUIVO_DADOS_JSON, "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=4)
-        
-    with open(ARQUIVO_BACKUP_JSON, "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=4)
-
-def converter_json_para_dataframe(dados_json):
-    linhas = []
-    for data_str, registros in dados_json.items():
-        for integrante, info in registros.items():
-            linhas.append({
-                "Data": data_str,
-                "Integrante": integrante,
-                "Pontos": info.get("Pontos", 0),
-                "Observação": info.get("Observação", ""),
-            })
-    if not linhas:
+def carregar_dados_planilha():
+    try:
+        conn = get_gsheets_connection()
+        # Lê a planilha vinculada
+        df = conn.read(ttl=0)
+        if df.empty or not all(col in df.columns for col in ["Data", "Integrante", "Pontos"]):
+            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="fill").fillna(0).astype(int)
+        df["Observação"] = df["Observação"].fillna("").astype(str)
+        df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
+        return df.dropna(subset=["Data", "Integrante"])
+    except Exception as e:
+        st.error(f"Erro ao ler do Google Sheets: {e}")
         return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-    return pd.DataFrame(linhas)
+
+def salvar_registro_planilha(data_str, integrante, pontos, observacao):
+    try:
+        conn = get_gsheets_connection()
+        df_atual = conn.read(ttl=0)
+        
+        # Garante colunas base
+        if df_atual.empty or not all(col in df_atual.columns for col in ["Data", "Integrante", "Pontos", "Observação"]):
+            df_atual = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+            
+        # Remove se já existir lançamento para o mesmo dia e integrante (para atualizar em vez de duplicar)
+        df_atual["Data"] = pd.to_datetime(df_atual["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
+        df_atual = df_atual[~((df_atual["Data"] == data_str) & (df_atual["Integrante"] == integrante))]
+        
+        # Adiciona a nova linha
+        novo_registro = pd.DataFrame([{
+            "Data": data_str,
+            "Integrante": integrante,
+            "Pontos": int(pontos),
+            "Observação": str(observacao)
+        }])
+        
+        df_atual = pd.concat([df_atual, novo_registro], ignore_index=True)
+        conn.update(data=df_atual)
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar na planilha: {e}")
+        return False
 
 def carregar_historico_json():
     if ARQUIVO_HISTORICO_JSON.exists():
@@ -249,8 +226,7 @@ def obter_classificacao(pontos, patentes):
     return list(patentes.values())[-1]
 
 integrantes_info = carregar_integrantes()
-dados_diarios = carregar_dados_json()
-df_pontos = converter_json_para_dataframe(dados_diarios)
+df_pontos = carregar_dados_planilha()
 
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
@@ -278,15 +254,11 @@ with aba_lancamento:
                 st.warning("Selecione o integrante.")
             else:
                 data_str = data_lancamento.strftime("%Y-%m-%d")
-                if data_str not in dados_diarios:
-                    dados_diarios[data_str] = {}
-                dados_diarios[data_str][integrante] = {
-                    "Pontos": int(pontos),
-                    "Observação": observacao if observacao else ""
-                }
-                salvar_dados_json(dados_diarios)
-                st.success(f"Pontuação de {integrante} salva com segurança na raiz para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
-                st.rerun()
+                sucesso = salvar_registro_planilha(data_str, integrante, pontos, observacao)
+                if sucesso:
+                    st.success(f"Pontuação de {integrante} salva na nuvem com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                    time.sleep(1)
+                    st.rerun()
 
 with aba_ranking:
     if not df_pontos.empty:
@@ -358,7 +330,7 @@ with aba_ranking:
         df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
-        st.info("Nenhum registo encontrado ainda.")
+        st.info("Nenhum registo encontrado ainda na planilha.")
 
 with aba_podio:
     st.subheader("🏆 Ranking Atual - Pódio")
@@ -402,31 +374,6 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
-    st.markdown("### 🛡️ Segurança e Backup dos Dados")
-    col_bkp1, col_bkp2 = st.columns(2)
-    with col_bkp1:
-        if ARQUIVO_DADOS_JSON.exists():
-            with open(ARQUIVO_DADOS_JSON, "r", encoding="utf-8") as f:
-                json_bytes = f.read()
-            st.download_button(
-                label="📥 Baixar Backup do JSON",
-                data=json_bytes,
-                file_name="backup_dados_diarios.json",
-                mime="application/json",
-                use_container_width=True
-            )
-    with col_bkp2:
-        uploaded_backup = st.file_uploader("Restaurar JSON de Backup:", type=["json"])
-        if uploaded_backup is not None:
-            try:
-                dados_restaurados = json.load(uploaded_backup)
-                salvar_dados_json(dados_restaurados)
-                st.success("Dados restaurados com sucesso! Atualizando...")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao ler o arquivo de backup: {e}")
-
-    st.markdown("---")
     st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
