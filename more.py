@@ -342,7 +342,27 @@ with aba_podio:
         st.info("Nenhum dado disponível para montar o pódio.")
 
 with aba_admin:
-    st.subheader("⚙️ Configuração, Gestão e Backups")
+    st.subheader("⚙️ Configuração, Gestão e Exclusão de Registros")
+    
+    # --- EXCLUIR LANÇAMENTO ERRADO ---
+    st.markdown("### 🗑️ Apagar Lançamento Incorreto")
+    if not df_pontos.empty:
+        df_excluir = df_pontos.copy().reset_index().rename(columns={"index": "Indice_Original"})
+        df_excluir["Exibicao"] = df_excluir.index.astype(str) + " - " + df_excluir["Data"] + " | " + df_excluir["Integrante"] + " | " + df_excluir["Pontos"].astype(str) + " pts (" + df_excluir["Observação"] + ")"
+        
+        linha_selecionada = st.selectbox("Selecione o registo que deseja apagar:", df_excluir["Exibicao"])
+        
+        if st.button("❌ Apagar Registo Selecionado", use_container_width=True):
+            idx_escolhido = int(linha_selecionada.split(" - ")[0])
+            # Remove a linha do DataFrame original
+            df_novo = df_pontos.drop(df_pontos.index[idx_escolhido]).reset_index(drop=True)
+            df_novo.to_csv(ARQUIVO_DADOS_CSV, index=False)
+            st.success("Registo apagado com sucesso!")
+            st.rerun()
+    else:
+        st.info("Não há registos para apagar.")
+
+    st.markdown("---")
     
     # --- BOTÕES DE BACKUP ---
     st.markdown("### 💾 Gestão de Ficheiro de Dados (Backup)")
