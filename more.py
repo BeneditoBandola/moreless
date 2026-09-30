@@ -1,10 +1,8 @@
 from datetime import datetime
-import json
 import os
 from pathlib import Path
 import random
 import altair as alt
-import gspread
 import pandas as pd
 import streamlit as st
 
@@ -17,6 +15,7 @@ st.set_page_config(
 
 PASTA_SCRIPT = Path(__file__).resolve().parent
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
+ARQUIVO_DADOS_CSV = PASTA_SCRIPT / "banco_dados.csv"
 PASTA_FOTOS = PASTA_SCRIPT / "fotos_integrantes"
 
 if not PASTA_FOTOS.exists():
@@ -157,50 +156,38 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM GOOGLE SHEETS VIA SECRETS ---
-@st.cache_resource
-def conectar_gsheets():
-    try:
-        secrets_dict = dict(st.secrets["gcp_service_account"])
-        gc = gspread.service_account_from_dict(secrets_dict)
-        nome_planilha = st.secrets.get("spreadsheet", "BancoDados_Multitemas")
-        sh = gc.open(nome_planilha)
-        return sh.sheet1
-    except Exception as e:
-        st.error(f"ERRO DE CONEXÃO COM O GOOGLE SHEETS: {e}")
-        return None
+# --- SISTEMA DE DADOS SIMPLES (CSV LOCAL) ---
+def carregar_dados_local():
+    if ARQUIVO_DADOS_CSV.exists():
+        try:
+            df = pd.read_csv(ARQUIVO_DADOS_CSV)
+            if df.empty or not all(col in df.columns for col in ["Data", "Integrante", "Pontos", "Observação"]):
+                return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+            df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
+            df["Observação"] = df["Observação"].fillna("").astype(str)
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
+            return df.dropna(subset=["Data", "Integrante"])
+        except Exception:
+            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+    else:
+        df_inicial = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
+        df_inicial.to_csv(ARQUIVO_DADOS_CSV, index=False)
+        return df_inicial
 
-def carregar_dados_planilha():
+def salvar_registro_local(data_str, integrante, pontos, observacao):
     try:
-        sheet = conectar_gsheets()
-        if sheet is None:
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-        
-        dados = sheet.get_all_records()
-        if not dados:
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-            
-        df = pd.DataFrame(dados)
-        if not all(col in df.columns for col in ["Data", "Integrante", "Pontos"]):
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-            
-        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
-        df["Observação"] = df["Observação"].fillna("").astype(str)
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
-        return df.dropna(subset=["Data", "Integrante"])
-    except Exception as e:
-        return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-
-def salvar_registro_planilha(data_str, integrante, pontos, observacao):
-    try:
-        sheet = conectar_gsheets()
-        if sheet is None:
-            return False
-            
-        sheet.append_row([data_str, integrante, int(pontos), str(observacao)])
+        df = carregar_dados_local()
+        novo_df = pd.DataFrame([{
+            "Data": data_str,
+            "Integrante": integrante,
+            "Pontos": int(pontos),
+            "Observação": str(observacao)
+        }])
+        df = pd.concat([df, novo_df], ignore_index=True)
+        df.to_csv(ARQUIVO_DADOS_CSV, index=False)
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar na planilha: {e}")
+        st.error(f"Erro ao salvar: {e}")
         return False
 
 def obter_classificacao(pontos, patentes):
@@ -210,7 +197,7 @@ def obter_classificacao(pontos, patentes):
     return list(patentes.values())[-1]
 
 integrantes_info = carregar_integrantes()
-df_pontos = carregar_dados_planilha()
+df_pontos = carregar_dados_local()
 
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
@@ -238,9 +225,9 @@ with aba_lancamento:
                 st.warning("Selecione o integrante.")
             else:
                 data_str = data_lancamento.strftime("%Y-%m-%d")
-                sucesso = salvar_registro_planilha(data_str, integrante, pontos, observacao)
+                sucesso = salvar_registro_local(data_str, integrante, pontos, observacao)
                 if sucesso:
-                    st.success(f"Pontuação de {integrante} salva no Google Sheets com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                    st.success(f"Pontuação de {integrante} salva com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                     st.rerun()
 
 with aba_ranking:
@@ -313,7 +300,7 @@ with aba_ranking:
         df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
     else:
-        st.info("Nenhum registo encontrado na planilha do Google Sheets.")
+        st.info("Nenhum registo encontrado. Use a aba 'Registrar' para adicionar pontuações.")
 
 with aba_podio:
     st.subheader("🏆 Ranking Atual - Pódio")
@@ -357,7 +344,7 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙️ Configuração e Gestão de Dados e Fotos")
     
-    st.markdown("### 🖼️️ Gerenciar Fotos dos Integrantes")
+    st.markdown("### 🖼️ Gerenciar Fotos dos Integrantes")
     integrante_foto_sel = st.selectbox("Selecione o Integrante para Upar/Trocar a Foto:", list(integrantes_info.keys()))
     
     if integrante_foto_sel:
@@ -403,7 +390,7 @@ with aba_admin:
                 else:
                     caminho_foto_salva = ""
                     if arquivo_foto is not None:
-                        caminho_foto_salva = str(PASTA_FOS / f"{novo_nome.strip()}.jpg") if 'PASTA_FOS' in globals() else str(PASTA_FOTOS / f"{novo_nome.strip()}.jpg")
+                        caminho_foto_salva = str(PASTA_FOTOS / f"{novo_nome.strip()}.jpg")
                         with open(caminho_foto_salva, "wb") as f:
                             f.write(arquivo_foto.getbuffer())
                     
