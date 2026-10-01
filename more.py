@@ -16,11 +16,8 @@ st.set_page_config(
 PASTA_SCRIPT = Path(__file__).resolve().parent
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
 ARQUIVO_DADOS_CSV = PASTA_SCRIPT / "banco_dados.csv"
-PASTA_FOTOS = PASTA_SCRIPT / "fotos_integrantes"
 
-if not PASTA_FOTOS.exists():
-    PASTA_FOTOS.mkdir(parents=True, exist_ok=True)
-
+# As fotos estão direto na raiz do projeto conforme o seu print do GitHub
 PATENTES_ORIGINAIS = {
     100: "👑 Deus Supremo",
     75: "🐐 Cabrito Sagrado",
@@ -122,11 +119,11 @@ st.markdown(
 )
 
 INTEGRANTES_PADRAO = {
-    "Bárbara": {"Cor": "#DB2777", "Foto": str(PASTA_FOTOS / "Barbara.jpg")},
-    "Benedito": {"Cor": "#2563EB", "Foto": str(PASTA_FOTOS / "Benedito.jpg")},
-    "Samuel": {"Cor": "#D97706", "Foto": str(PASTA_FOTOS / "Samuel.jpg")},
-    "Vinícius": {"Cor": "#059669", "Foto": str(PASTA_FOTOS / "Vinicius.jpg")},
-    "Gabrielle": {"Cor": "#8B5CF6", "Foto": str(PASTA_FOTOS / "Gabrielle.jpg")},
+    "Bárbara": {"Cor": "#DB2777", "Foto": str(PASTA_SCRIPT / "barbara.png")},
+    "Benedito": {"Cor": "#2563EB", "Foto": str(PASTA_SCRIPT / "benedito.png")},
+    "Samuel": {"Cor": "#D97706", "Foto": str(PASTA_SCRIPT / "samuel.png")},
+    "Vinícius": {"Cor": "#059669", "Foto": str(PASTA_SCRIPT / "vinicius.png")},
+    "Gabrielle": {"Cor": "#8B5CF6", "Foto": str(PASTA_SCRIPT / "gabrielle.png")},
 }
 
 def carregar_integrantes():
@@ -156,7 +153,7 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- SISTEMA DE DADOS SIMPLES (CSV LOCAL) ---
+# --- SISTEMA DE DADOS SIMPLES (CSV LOCAL COM DATA BR) ---
 def carregar_dados_local():
     if ARQUIVO_DADOS_CSV.exists():
         try:
@@ -165,7 +162,8 @@ def carregar_dados_local():
                 return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
             df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
             df["Observação"] = df["Observação"].fillna("").astype(str)
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
+            # Converte para datetime garantindo o padrão brasileiro (dayfirst=True) e exibe como DD/MM/YYYY
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
             return df.dropna(subset=["Data", "Integrante"])
         except Exception as e:
             return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
@@ -174,11 +172,17 @@ def carregar_dados_local():
         df_inicial.to_csv(ARQUIVO_DADOS_CSV, index=False)
         return df_inicial
 
-def salvar_registro_local(data_str, integrante, pontos, observacao):
+def salvar_registro_local(data_obj, integrante, pontos, observacao):
     try:
+        # Transforma o objeto de data do Streamlit para o formato brasileiro DD/MM/YYYY antes de salvar
+        if hasattr(data_obj, "strftime"):
+            data_str = data_obj.strftime("%d/%m/%Y")
+        else:
+            data_str = str(data_obj)
+
         df = carregar_dados_local()
         novo_df = pd.DataFrame([{
-            "Data": str(data_str),
+            "Data": data_str,
             "Integrante": str(integrante),
             "Pontos": int(pontos),
             "Observação": str(observacao)
@@ -215,7 +219,7 @@ with aba_lancamento:
             if foto_path and Path(foto_path).exists():
                 st.image(foto_path, width=80)
 
-        data_lancamento = st.date_input("Data:", value=datetime.today())
+        data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
         pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
         observacao = st.text_input("Observação (Opcional):")
         enviado = st.form_submit_button("🔥 Registrar Pontuação", use_container_width=True)
@@ -224,8 +228,7 @@ with aba_lancamento:
             if not integrante:
                 st.warning("Selecione o integrante.")
             else:
-                data_str = data_lancamento.strftime("%Y-%m-%d")
-                sucesso = salvar_registro_local(data_str, integrante, pontos, observacao)
+                sucesso = salvar_registro_local(data_lancamento, integrante, pontos, observacao)
                 if sucesso:
                     st.success(f"Pontuação de {integrante} salva com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                     st.rerun()
@@ -297,8 +300,7 @@ with aba_ranking:
         st.markdown("---")
         st.subheader("📋 Livro de Registros Recentes")
         df_exibicao = df_pontos.copy()
-        df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime("%d/%m/%Y")
-        st.dataframe(df_exibicao.sort_values(by="Data", ascending=False).reset_index(drop=True), use_container_width=True)
+        st.dataframe(df_exibicao.sort_values(by="Data", ascending=False, key=lambda x: pd.to_datetime(x, format="%d/%m/%Y", errors="coerce")).reset_index(drop=True), use_container_width=True)
     else:
         st.info("Nenhum registo encontrado. Use a aba 'Registrar' para adicionar pontuações.")
 
@@ -415,7 +417,8 @@ with aba_admin:
                 if btn_salvar_foto:
                     caminho_salvo = info_sel.get("Foto", "")
                     if nova_foto_file is not None:
-                        caminho_salvo = str(PASTA_FOTOS / f"{integrante_foto_sel}.jpg")
+                        # Salva na raiz com nome em minúsculo se preferir, ou usa o nome do integrante
+                        caminho_salvo = str(PASTA_SCRIPT / f"{integrante_foto_sel.lower()}.png")
                         with open(caminho_salvo, "wb") as f:
                             f.write(nova_foto_file.getbuffer())
                     
@@ -438,7 +441,7 @@ with aba_admin:
                 else:
                     caminho_foto_salva = ""
                     if arquivo_foto is not None:
-                        caminho_foto_salva = str(PASTA_FOTOS / f"{novo_nome.strip()}.jpg")
+                        caminho_foto_salva = str(PASTA_SCRIPT / f"{novo_nome.strip().lower()}.png")
                         with open(caminho_foto_salva, "wb") as f:
                             f.write(arquivo_foto.getbuffer())
                     
