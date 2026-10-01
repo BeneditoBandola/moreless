@@ -165,9 +165,9 @@ def carregar_dados_local():
                 return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
             df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
             df["Observação"] = df["Observação"].fillna("").astype(str)
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.strftime("%Y-%m-%d")
             return df.dropna(subset=["Data", "Integrante"])
-        except Exception:
+        except Exception as e:
             return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
     else:
         df_inicial = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
@@ -178,8 +178,8 @@ def salvar_registro_local(data_str, integrante, pontos, observacao):
     try:
         df = carregar_dados_local()
         novo_df = pd.DataFrame([{
-            "Data": data_str,
-            "Integrante": integrante,
+            "Data": str(data_str),
+            "Integrante": str(integrante),
             "Pontos": int(pontos),
             "Observação": str(observacao)
         }])
@@ -215,7 +215,7 @@ with aba_lancamento:
             if foto_path and Path(foto_path).exists():
                 st.image(foto_path, width=80)
 
-        data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
+        data_lancamento = st.date_input("Data:", value=datetime.today())
         pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
         observacao = st.text_input("Observação (Opcional):")
         enviado = st.form_submit_button("🔥 Registrar Pontuação", use_container_width=True)
@@ -342,9 +342,8 @@ with aba_podio:
         st.info("Nenhum dado disponível para montar o pódio.")
 
 with aba_admin:
-    st.subheader("⚙️️ Configuração, Gestão e Exclusão de Registros")
+    st.subheader("⚙ Configuração, Gestão e Exclusão de Registros")
     
-    # --- EXCLUIR LANÇAMENTO ERRADO ---
     st.markdown("### 🗑️ Apagar Lançamento Incorreto")
     if not df_pontos.empty:
         df_excluir = df_pontos.copy().reset_index().rename(columns={"index": "Indice_Original"})
@@ -363,7 +362,6 @@ with aba_admin:
 
     st.markdown("---")
     
-    # --- BOTÕES DE BACKUP ---
     st.markdown("### 💾 Gestão de Ficheiro de Dados (Backup)")
     col_dl, col_ul = st.columns(2)
     
