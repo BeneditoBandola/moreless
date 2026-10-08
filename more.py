@@ -162,7 +162,6 @@ def carregar_dados_local():
                 return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
             df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
             df["Observação"] = df["Observação"].fillna("").astype(str)
-            # Converte para datetime garantindo o padrão brasileiro (dayfirst=True) e exibe como DD/MM/YYYY
             df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
             return df.dropna(subset=["Data", "Integrante"])
         except Exception as e:
@@ -174,7 +173,6 @@ def carregar_dados_local():
 
 def salvar_registro_local(data_obj, integrante, pontos, observacao):
     try:
-        # Transforma o objeto de data do Streamlit para o formato brasileiro DD/MM/YYYY antes de salvar
         if hasattr(data_obj, "strftime"):
             data_str = data_obj.strftime("%d/%m/%Y")
         else:
@@ -220,7 +218,7 @@ with aba_lancamento:
                 st.image(foto_path, width=80)
 
         data_lancamento = st.date_input("Data:", value=datetime.today(), format="DD/MM/YYYY")
-        pontos = st.number_input("Pontos (Máximo 25):", min_value=0, max_value=25, step=1, format="%d")
+        pontos = st.number_input("Pontos:", min_value=0, step=1, format="%d")
         observacao = st.text_input("Observação (Opcional):")
         enviado = st.form_submit_button("🔥 Registrar Pontuação", use_container_width=True)
 
@@ -417,7 +415,6 @@ with aba_admin:
                 if btn_salvar_foto:
                     caminho_salvo = info_sel.get("Foto", "")
                     if nova_foto_file is not None:
-                        # Salva na raiz com nome em minúsculo se preferir, ou usa o nome do integrante
                         caminho_salvo = str(PASTA_SCRIPT / f"{integrante_foto_sel.lower()}.png")
                         with open(caminho_salvo, "wb") as f:
                             f.write(nova_foto_file.getbuffer())
