@@ -15,9 +15,7 @@ st.set_page_config(
 
 PASTA_SCRIPT = Path(__file__).resolve().parent
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
-ARQUIVO_DADOS_CSV = PASTA_SCRIPT / "banco_dados.csv"
 
-# As fotos estão direto na raiz do projeto conforme o seu print do GitHub
 PATENTES_ORIGINAIS = {
     100: "👑 Deus Supremo",
     75: "🐐 Cabrito Sagrado",
@@ -153,43 +151,55 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- SISTEMA DE DADOS SIMPLES (CSV LOCAL COM DATA BR) ---
-def carregar_dados_local():
-    if ARQUIVO_DADOS_CSV.exists():
-        try:
-            df = pd.read_csv(ARQUIVO_DADOS_CSV)
-            if df.empty or not all(col in df.columns for col in ["Data", "Integrante", "Pontos", "Observação"]):
-                return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-            df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
-            df["Observação"] = df["Observação"].fillna("").astype(str)
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
-            return df.dropna(subset=["Data", "Integrante"])
-        except Exception as e:
-            return pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-    else:
-        df_inicial = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-        df_inicial.to_csv(ARQUIVO_DADOS_CSV, index=False)
-        return df_inicial
+# --- SISTEMA DE DADOS VIA GOOGLE SHEETS CONNECTION ---
+def carregar_dados_sheets():
+    colunas_padrao = ["Data", "Integrante", "Pontos", "Observação"]
+    try:
+        conn = st.connection("gsheets", type="gsheets")
+        # Se a aba da sua planilha tiver outro nome além de "Página1", altere abaixo
+        df = conn.read(worksheet="Página1", ttl=0) 
+        if df.empty or not all(col in df.columns for col in colunas_padrao):
+            return pd.DataFrame(columns=colunas_padrao)
+        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
+        df["Observação"] = df["Observação"].fillna("").astype(str)
+        df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
+        return df.dropna(subset=["Data", "Integrante"])
+    except Exception as e:
+        return pd.DataFrame(columns=colunas_padrao)
 
-def salvar_registro_local(data_obj, integrante, pontos, observacao):
+def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
     try:
         if hasattr(data_obj, "strftime"):
             data_str = data_obj.strftime("%d/%m/%Y")
         else:
             data_str = str(data_obj)
 
-        df = carregar_dados_local()
+        conn = st.connection("gsheets", type="gsheets")
+        df_atual = carregar_dados_sheets()
+        
         novo_df = pd.DataFrame([{
             "Data": data_str,
             "Integrante": str(integrante),
             "Pontos": int(pontos),
             "Observação": str(observacao)
         }])
-        df = pd.concat([df, novo_df], ignore_index=True)
-        df.to_csv(ARQUIVO_DADOS_CSV, index=False)
+        
+        df_atualizado = pd.concat([df_atual, novo_df], ignore_index=True)
+        conn.update(worksheet="Página1", data=df_atualizado)
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar: {e}")
+        st.error(f"Erro ao salvar na planilha: {e}")
+        return False
+
+def deletar_registro_sheets(idx):
+    try:
+        conn = st.connection("gsheets", type="gsheets")
+        df_atual = carregar_dados_sheets()
+        df_novo = df_atual.drop(df_atual.index[idx]).reset_index(drop=True)
+        conn.update(worksheet="Página1", data=df_novo)
+        return True
+    except Exception as e:
+        st.error(f"Erro ao apagar registo: {e}")
         return False
 
 def obter_classificacao(pontos, patentes):
@@ -199,7 +209,7 @@ def obter_classificacao(pontos, patentes):
     return list(patentes.values())[-1]
 
 integrantes_info = carregar_integrantes()
-df_pontos = carregar_dados_local()
+df_pontos = carregar_dados_sheets()
 
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
@@ -226,9 +236,9 @@ with aba_lancamento:
             if not integrante:
                 st.warning("Selecione o integrante.")
             else:
-                sucesso = salvar_registro_local(data_lancamento, integrante, pontos, observacao)
+                sucesso = salvar_registro_sheets(data_lancamento, integrante, pontos, observacao)
                 if sucesso:
-                    st.success(f"Pontuação de {integrante} salva com sucesso para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                    st.success(f"Pontuação de {integrante} salva com sucesso na nuvem para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                     st.rerun()
 
 with aba_ranking:
@@ -353,43 +363,12 @@ with aba_admin:
         
         if st.button("❌ Apagar Registo Selecionado", use_container_width=True):
             idx_escolhido = int(linha_selecionada.split(" - ")[0])
-            df_novo = df_pontos.drop(df_pontos.index[idx_escolhido]).reset_index(drop=True)
-            df_novo.to_csv(ARQUIVO_DADOS_CSV, index=False)
-            st.success("Registo apagado com sucesso!")
-            st.rerun()
+            sucesso = deletar_registro_sheets(idx_escolhido)
+            if sucesso:
+                st.success("Registo apagado com sucesso da nuvem!")
+                st.rerun()
     else:
         st.info("Não há registos para apagar.")
-
-    st.markdown("---")
-    
-    st.markdown("### 💾 Gestão de Ficheiro de Dados (Backup)")
-    col_dl, col_ul = st.columns(2)
-    
-    with col_dl:
-        st.write("Guardar dados atuais no PC:")
-        if ARQUIVO_DADOS_CSV.exists():
-            with open(ARQUIVO_DADOS_CSV, "rb") as f:
-                st.download_button(
-                    label="📥 Baixar Backup (CSV)",
-                    data=f,
-                    file_name="banco_dados.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-        else:
-            st.info("Ainda sem dados para baixar.")
-            
-    with col_ul:
-        st.write("Restaurar / Enviar dados anteriores:")
-        arquivo_upload = st.file_uploader("Carregar 'banco_dados.csv':", type=["csv"])
-        if arquivo_upload is not None:
-            try:
-                df_up = pd.read_csv(arquivo_upload)
-                df_up.to_csv(ARQUIVO_DADOS_CSV, index=False)
-                st.success("Dados restaurados com sucesso! Recarregue a página.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao carregar ficheiro: {e}")
 
     st.markdown("---")
     st.subheader("🖼️ Gerenciar Fotos dos Integrantes")
