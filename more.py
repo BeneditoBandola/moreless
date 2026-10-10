@@ -5,6 +5,8 @@ import random
 import altair as alt
 import pandas as pd
 import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -151,15 +153,39 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- SISTEMA DE DADOS VIA GOOGLE SHEETS CONNECTION ---
+# --- CONEXÃO GSPREAD COM GOOGLE SHEETS ---
+def conectar_planilha():
+    try:
+        escopos = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        # Pega as credenciais do secrets do Streamlit
+        credenciais_dict = dict(st.secrets["gcp_service_account"])
+        credenciador = Credentials.from_service_account_info(credenciais_dict, scopes=escopos)
+        cliente = gspread.authorize(credenciador)
+        
+        # Abre a planilha pelo nome "moreless"
+        planilha = cliente.open("moreless")
+        return planilha.sheet1
+    except Exception as e:
+        return None
+
 def carregar_dados_sheets():
     colunas_padrao = ["Data", "Integrante", "Pontos", "Observação"]
     try:
-        conn = st.connection("gsheets", type="gsheets")
-        # Se a aba da sua planilha tiver outro nome além de "Página1", altere abaixo
-        df = conn.read(worksheet="Página1", ttl=0) 
-        if df.empty or not all(col in df.columns for col in colunas_padrao):
+        sheet = conectar_planilha()
+        if sheet is None:
             return pd.DataFrame(columns=colunas_padrao)
+        
+        dados = sheet.get_all_records()
+        if not dados:
+            return pd.DataFrame(columns=colunas_padrao)
+            
+        df = pd.DataFrame(dados)
+        if not all(col in df.columns for col in colunas_padrao):
+            return pd.DataFrame(columns=colunas_padrao)
+            
         df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
         df["Observação"] = df["Observação"].fillna("").astype(str)
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
@@ -174,18 +200,13 @@ def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
         else:
             data_str = str(data_obj)
 
-        conn = st.connection("gsheets", type="gsheets")
-        df_atual = carregar_dados_sheets()
-        
-        novo_df = pd.DataFrame([{
-            "Data": data_str,
-            "Integrante": str(integrante),
-            "Pontos": int(pontos),
-            "Observação": str(observacao)
-        }])
-        
-        df_atualizado = pd.concat([df_atual, novo_df], ignore_index=True)
-        conn.update(worksheet="Página1", data=df_atualizado)
+        sheet = conectar_planilha()
+        if sheet is None:
+            st.error("Não foi possível conectar à planilha.")
+            return False
+            
+        # Adiciona a nova linha no final da planilha
+        sheet.append_row([data_str, str(integrante), int(pontos), str(observacao)])
         return True
     except Exception as e:
         st.error(f"Erro ao salvar na planilha: {e}")
@@ -193,10 +214,12 @@ def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
 
 def deletar_registro_sheets(idx):
     try:
-        conn = st.connection("gsheets", type="gsheets")
-        df_atual = carregar_dados_sheets()
-        df_novo = df_atual.drop(df_atual.index[idx]).reset_index(drop=True)
-        conn.update(worksheet="Página1", data=df_novo)
+        sheet = conectar_planilha()
+        if sheet is None:
+            return False
+        # No gspread, a linha 1 é o cabeçalho, então os dados começam na linha 2 (idx + 2)
+        linha_excel = idx + 2
+        sheet.delete_rows(linha_excel)
         return True
     except Exception as e:
         st.error(f"Erro ao apagar registo: {e}")
