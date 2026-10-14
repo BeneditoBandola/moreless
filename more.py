@@ -17,13 +17,35 @@ PASTA_SCRIPT = Path(__file__).resolve().parent
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
 ARQUIVO_DADOS = PASTA_SCRIPT / "dados_pontos.csv"
 
-PATENTES_ORIGINAIS = {
-    100: "👑 Deus Supremo",
-    75: "🐐 Cabrito Sagrado",
-    50: "🐎 Égua Satânica",
-    25: "🐴 Mula Juvenil",
-    0: "🎒 Mochila de Criança",
-}
+# --- LISTA GIGANTE DE PATENTES ALEATÓRIAS E ZOADAS ---
+PATENTES_ZOADAS = [
+    "👑 Deus Supremo",
+    "🐐 Cabrito Sagrado",
+    "🐎 Égua Satânica",
+    "🐴 Mula Juvenil",
+    "🎒 Mochila de Criança",
+    "🥔 Batata de Micro-ondas",
+    "🦝 Guaxinim do Lixo",
+    "🤡 Dignidade em Falência",
+    "🐔 Frango Atropelado",
+    "🦄 Pônei Depressivo",
+    "🐒 Macaco Rebolador",
+    "🐢 Tartaruga Turbinada",
+    "🧅 Camadas de Sofrimento",
+    "🧟 Zumbi de Sexta-Feira",
+    "🧀 Queijo Mofado da Geladeira",
+    "🧻 Papel Higienico de Folha Dupla",
+    "🦥 Bicho-Preguiça em Chamas",
+    "🌵 Cacto Carente",
+    "🪩 Globo da Discórdia",
+    "🦨 Gambá Inspirador",
+    "🪱 Minhoca Astronauta",
+    "🪩 DJ de Festa Infantil",
+    "🦮 Cego Guiando Outro Cego",
+    "🛸 Abduzido por Preguiça",
+    "🍞 Torrada Queimada dos Dois Lados",
+    "🦺 Colete de Refugiado da Segunda-Feira",
+]
 
 TEMAS = {
     "💀 Cemitério": {
@@ -35,7 +57,6 @@ TEMAS = {
         "input_bg": "#18181B",
         "input_text": "#FFFFFF",
         "icone": "💀",
-        "patentes": PATENTES_ORIGINAIS,
     },
     "👰 Noiva e Casamentos": {
         "bg_app": "#FDF2F8",
@@ -46,7 +67,6 @@ TEMAS = {
         "input_bg": "#FFFFFF",
         "input_text": "#831843",
         "icone": "👰",
-        "patentes": PATENTES_ORIGINAIS,
     },
     "💖 Meninas e Estilo": {
         "bg_app": "#FFF1F2",
@@ -57,7 +77,6 @@ TEMAS = {
         "input_bg": "#FFFFFF",
         "input_text": "#4C0519",
         "icone": "💖",
-        "patentes": PATENTES_ORIGINAIS,
     },
     "💻 Tecnologia e Cyber": {
         "bg_app": "#030712",
@@ -68,7 +87,6 @@ TEMAS = {
         "input_bg": "#0F172A",
         "input_text": "#FFFFFF",
         "icone": "💻",
-        "patentes": PATENTES_ORIGINAIS,
     },
     "☕ Escritório Corporativo": {
         "bg_app": "#F8FAFC",
@@ -79,7 +97,6 @@ TEMAS = {
         "input_bg": "#FFFFFF",
         "input_text": "#1E293B",
         "icone": "☕",
-        "patentes": PATENTES_ORIGINAIS,
     },
 }
 
@@ -152,7 +169,6 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- FUNÇÕES DE ARQUIVO LOCAL (CSV) ---
 def carregar_dados_locais():
     colunas_padrao = ["Data", "Integrante", "Pontos", "Observação"]
     if ARQUIVO_DADOS.exists():
@@ -203,11 +219,18 @@ def deletar_registro_local(idx):
         st.error(f"Erro ao apagar registro: {e}")
         return False
 
-def obter_classificacao(pontos, patentes):
-    for limite in sorted(patentes.keys(), reverse=True):
-        if pontos >= limite:
-            return patentes[limite]
-    return list(patentes.values())[-1]
+# --- FUNÇÃO PARA SORTEAR PATENTE ALEATÓRIA BASEada NOS PONTOS ---
+def obter_patente_aleatoria(pontos, nome_integrante):
+    # Usa a pontuação e o nome como semente (seed) para fixar a patente 
+    # por pontuação/pessoa até que os pontos mudem, garantindo consistência.
+    seed_valor = int(pontos) + sum(ord(c) for c in str(nome_integrante))
+    rnd = random.Random(seed_valor)
+    
+    # Se tiver 0 pontos, dá preferência para as mais engraçadas/fracas do início
+    if pontos <= 0:
+        return rnd.choice(PATENTES_ZOADAS[3:])
+    
+    return rnd.choice(PATENTES_ZOADAS)
 
 integrantes_info = carregar_integrantes()
 df_pontos = carregar_dados_locais()
@@ -266,9 +289,12 @@ with aba_ranking:
 
         ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
         ranking_geral["Posição"] = ranking_geral.index + 1
-        ranking_geral["Patente"] = ranking_geral["Total_Pontos"].apply(
-            lambda x: obter_classificacao(x, t["patentes"])
+        
+        # Aplica a patente randômica baseada nos pontos e nome
+        ranking_geral["Patente"] = ranking_geral.apply(
+            lambda row: obter_patente_aleatoria(row["Total_Pontos"], row["Integrante"]), axis=1
         )
+        
         ranking_geral["Cor"] = ranking_geral["Integrante"].apply(
             lambda x: integrantes_info.get(x, {}).get("Cor", t["accent_color"])
         )
