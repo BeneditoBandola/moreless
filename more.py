@@ -5,6 +5,7 @@ import random
 import altair as alt
 import pandas as pd
 import streamlit as st
+import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -221,12 +222,9 @@ def deletar_registro_local(idx):
 
 # --- FUNÇÃO PARA SORTEAR PATENTE ALEATÓRIA BASEada NOS PONTOS ---
 def obter_patente_aleatoria(pontos, nome_integrante):
-    # Usa a pontuação e o nome como semente (seed) para fixar a patente 
-    # por pontuação/pessoa até que os pontos mudem, garantindo consistência.
     seed_valor = int(pontos) + sum(ord(c) for c in str(nome_integrante))
     rnd = random.Random(seed_valor)
     
-    # Se tiver 0 pontos, dá preferência para as mais engraçadas/fracas do início
     if pontos <= 0:
         return rnd.choice(PATENTES_ZOADAS[3:])
     
@@ -290,7 +288,6 @@ with aba_ranking:
         ranking_geral = ranking_geral.sort_values(by="Total_Pontos", ascending=False).reset_index(drop=True)
         ranking_geral["Posição"] = ranking_geral.index + 1
         
-        # Aplica a patente randômica baseada nos pontos e nome
         ranking_geral["Patente"] = ranking_geral.apply(
             lambda row: obter_patente_aleatoria(row["Total_Pontos"], row["Integrante"]), axis=1
         )
@@ -381,6 +378,45 @@ with aba_podio:
 with aba_admin:
     st.subheader("⚙ Configuração, Gestão e Exclusão de Registros")
     
+    # --- NOVO RECURSO: BACKUP E RESTAURAÇÃO VIA JSON ---
+    st.markdown("### 💾 Backup e Restauração de Dados")
+    c_bkp1, c_bkp2 = st.columns(2)
+    
+    with c_bkp1:
+        st.markdown("**Baixar Backup (JSON):**")
+        dados_json_str = "{}"
+        if ARQUIVO_DADOS.exists():
+            df_bkp = carregar_dados_locais()
+            dados_json_str = df_bkp.to_json(orient="records", force_ascii=False)
+        
+        st.download_button(
+            label="📥 Baixar Arquivo JSON",
+            data=dados_json_str,
+            file_name=f"backup_pontos_{datetime.now().strftime('%Y-%m-%d')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+        
+    with c_bkp2:
+        st.markdown("**Restaurar Backup (JSON):**")
+        arquivo_json_upload = st.file_uploader("Enviar JSON de Backup:", type=["json"])
+        if arquivo_json_upload is not None:
+            if st.button("🔄 Restaurar Dados do JSON", use_container_width=True):
+                try:
+                    conteudo = arquivo_json_upload.getvalue().decode("utf-8")
+                    df_restaurado = pd.read_json(io.StringIO(conteudo), orient="records")
+                    colunas_necessarias = ["Data", "Integrante", "Pontos", "Observação"]
+                    if all(c in df_restaurado.columns for c in colunas_necessarias):
+                        df_restaurado.to_csv(ARQUIVO_DADOS, index=False)
+                        st.success("✅ Dados restaurados com sucesso! Recarregando...")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("O arquivo JSON enviado não possui o formato correto.")
+                except Exception as e:
+                    st.error(f"Erro ao ler o arquivo JSON: {e}")
+
+    st.markdown("---")
     st.markdown("### 🗑️ Apagar Lançamento Incorreto")
     if not df_pontos.empty:
         df_excluir = df_pontos.copy().reset_index().rename(columns={"index": "Indice_Original"})
