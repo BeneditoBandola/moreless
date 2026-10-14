@@ -5,7 +5,6 @@ import random
 import altair as alt
 import pandas as pd
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -16,6 +15,7 @@ st.set_page_config(
 
 PASTA_SCRIPT = Path(__file__).resolve().parent
 ARQUIVO_INTEGRANTES = PASTA_SCRIPT / "integrantes_equipe.csv"
+ARQUIVO_DADOS = PASTA_SCRIPT / "dados_pontos.csv"
 
 PATENTES_ORIGINAIS = {
     100: "👑 Deus Supremo",
@@ -152,70 +152,55 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO COM O GOOGLE SHEETS VIA LINK ---
-def carregar_dados_sheets():
+# --- FUNÇÕES DE ARQUIVO LOCAL (CSV) ---
+def carregar_dados_locais():
     colunas_padrao = ["Data", "Integrante", "Pontos", "Observação"]
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(ttl=0)
-        
-        if df is None or df.empty:
+    if ARQUIVO_DADOS.exists():
+        try:
+            df = pd.read_csv(ARQUIVO_DADOS)
+            if not all(col in df.columns for col in colunas_padrao):
+                return pd.DataFrame(columns=colunas_padrao)
+            df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
+            df["Observação"] = df["Observação"].fillna("").astype(str)
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
+            return df.dropna(subset=["Data", "Integrante"])
+        except:
             return pd.DataFrame(columns=colunas_padrao)
-            
-        df.columns = df.columns.str.strip().str.capitalize()
-        
-        for col in colunas_padrao:
-            if col not in df.columns:
-                df[col] = ""
-
-        df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
-        df["Observação"] = df["Observação"].fillna("").astype(str)
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
-        return df.dropna(subset=["Data", "Integrante"])
-    except Exception as e:
+    else:
         return pd.DataFrame(columns=colunas_padrao)
 
-def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
+def salvar_registro_local(data_obj, integrante, pontos, observacao):
     try:
         if hasattr(data_obj, "strftime"):
             data_str = data_obj.strftime("%d/%m/%Y")
         else:
             data_str = str(data_obj)
 
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df_atual = conn.read(ttl=0)
-        if df_atual is None:
-            df_atual = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
-            
-        df_atual.columns = df_atual.columns.str.strip().str.capitalize()
-
+        df = carregar_dados_locais()
         nova_linha = pd.DataFrame([{
             "Data": data_str,
             "Integrante": str(integrante),
             "Pontos": int(pontos),
             "Observação": str(observacao)
         }])
-
-        df_atual = pd.concat([df_atual, nova_linha], ignore_index=True)
-        conn.update(data=df_atual)
+        
+        df = pd.concat([df, nova_linha], ignore_index=True)
+        df.to_csv(ARQUIVO_DADOS, index=False)
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar na planilha: {e}")
+        st.error(f"Erro ao salvar localmente: {e}")
         return False
 
-def deletar_registro_sheets(idx):
+def deletar_registro_local(idx):
     try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df_atual = conn.read(ttl=0)
-        if df_atual is None or df_atual.empty:
+        df = carregar_dados_locais()
+        if df.empty:
             return False
-            
-        df_atual.columns = df_atual.columns.str.strip().str.capitalize()
-        df_atual = df_atual.drop(idx).reset_index(drop=True)
-        conn.update(data=df_atual)
+        df = df.drop(idx).reset_index(drop=True)
+        df.to_csv(ARQUIVO_DADOS, index=False)
         return True
     except Exception as e:
-        st.error(f"Erro ao apagar registo: {e}")
+        st.error(f"Erro ao apagar registro: {e}")
         return False
 
 def obter_classificacao(pontos, patentes):
@@ -225,7 +210,7 @@ def obter_classificacao(pontos, patentes):
     return list(patentes.values())[-1]
 
 integrantes_info = carregar_integrantes()
-df_pontos = carregar_dados_sheets()
+df_pontos = carregar_dados_locais()
 
 st.title(f"{t['icone']} Ranking & Patentes")
 st.markdown("---")
@@ -252,9 +237,9 @@ with aba_lancamento:
             if not integrante:
                 st.warning("Selecione o integrante.")
             else:
-                sucesso = salvar_registro_sheets(data_lancamento, integrante, pontos, observacao)
+                sucesso = salvar_registro_local(data_lancamento, integrante, pontos, observacao)
                 if sucesso:
-                    st.success(f"Pontuação de {integrante} salva com sucesso na nuvem para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
+                    st.success(f"Pontuação de {integrante} salva com sucesso localmente para o dia {data_lancamento.strftime('%d/%m/%Y')}!")
                     st.rerun()
 
 with aba_ranking:
@@ -326,7 +311,7 @@ with aba_ranking:
         df_exibicao = df_pontos.copy()
         st.dataframe(df_exibicao.sort_values(by="Data", ascending=False, key=lambda x: pd.to_datetime(x, format="%d/%m/%Y", errors="coerce")).reset_index(drop=True), use_container_width=True)
     else:
-        st.info("Nenhum registo encontrado. Use a aba 'Registrar' para adicionar pontuações.")
+        st.info("Nenhum registro encontrado. Use a aba 'Registrar' para adicionar pontuações.")
 
 with aba_podio:
     st.subheader("🏆 Ranking Atual - Pódio")
@@ -375,16 +360,16 @@ with aba_admin:
         df_excluir = df_pontos.copy().reset_index().rename(columns={"index": "Indice_Original"})
         df_excluir["Exibicao"] = df_excluir.index.astype(str) + " - " + df_excluir["Data"] + " | " + df_excluir["Integrante"] + " | " + df_excluir["Pontos"].astype(str) + " pts (" + df_excluir["Observação"] + ")"
         
-        linha_selecionada = st.selectbox("Selecione o registo que deseja apagar:", df_excluir["Exibicao"])
+        linha_selecionada = st.selectbox("Selecione o registro que deseja apagar:", df_excluir["Exibicao"])
         
-        if st.button("❌ Apagar Registo Selecionado", use_container_width=True):
+        if st.button("❌ Apagar Registro Selecionado", use_container_width=True):
             idx_escolhido = int(linha_selecionada.split(" - ")[0])
-            sucesso = deletar_registro_sheets(idx_escolhido)
+            sucesso = deletar_registro_local(idx_escolhido)
             if sucesso:
-                st.success("Registo apagado com sucesso da nuvem!")
+                st.success("Registro apagado com sucesso!")
                 st.rerun()
     else:
-        st.info("Não há registos para apagar.")
+        st.info("Não há registros para apagar.")
 
     st.markdown("---")
     st.subheader("🖼️ Gerenciar Fotos dos Integrantes")
