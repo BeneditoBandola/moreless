@@ -157,16 +157,13 @@ def carregar_dados_sheets():
     colunas_padrao = ["Data", "Integrante", "Pontos", "Observação"]
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-        # Lê a planilha informada no secrets (ttl=0 garante dados atualizados sem cache)
         df = conn.read(ttl=0)
         
         if df is None or df.empty:
             return pd.DataFrame(columns=colunas_padrao)
             
-        # Normaliza os nomes das colunas (removendo espaços extras e convertendo para maiúsculas/padrão)
         df.columns = df.columns.str.strip().str.capitalize()
         
-        # Garante que as colunas essenciais existam
         for col in colunas_padrao:
             if col not in df.columns:
                 df[col] = ""
@@ -186,15 +183,12 @@ def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
             data_str = str(data_obj)
 
         conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # Lê os dados atuais
         df_atual = conn.read(ttl=0)
         if df_atual is None:
             df_atual = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
             
         df_atual.columns = df_atual.columns.str.strip().str.capitalize()
 
-        # Cria a nova linha como um DataFrame
         nova_linha = pd.DataFrame([{
             "Data": data_str,
             "Integrante": str(integrante),
@@ -202,7 +196,6 @@ def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
             "Observação": str(observacao)
         }])
 
-        # Concatena a nova linha e atualiza a planilha inteira
         df_atual = pd.concat([df_atual, nova_linha], ignore_index=True)
         conn.update(data=df_atual)
         return True
@@ -218,8 +211,6 @@ def deletar_registro_sheets(idx):
             return False
             
         df_atual.columns = df_atual.columns.str.strip().str.capitalize()
-        
-        # Remove a linha pelo índice da tabela exibida
         df_atual = df_atual.drop(idx).reset_index(drop=True)
         conn.update(data=df_atual)
         return True
