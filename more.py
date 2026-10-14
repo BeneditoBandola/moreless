@@ -5,8 +5,7 @@ import random
 import altair as alt
 import pandas as pd
 import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
+from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -153,39 +152,25 @@ def salvar_integrante(nome, cor, caminho_foto):
     df_int = pd.DataFrame(dados_lista)
     df_int.to_csv(ARQUIVO_INTEGRANTES, index=False)
 
-# --- CONEXÃO GSPREAD COM GOOGLE SHEETS ---
-def conectar_planilha():
-    try:
-        escopos = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        # Pega as credenciais do secrets do Streamlit
-        credenciais_dict = dict(st.secrets["gcp_service_account"])
-        credenciador = Credentials.from_service_account_info(credenciais_dict, scopes=escopos)
-        cliente = gspread.authorize(credenciador)
-        
-        # Abre a planilha pelo nome "moreless"
-        planilha = cliente.open("moreless")
-        return planilha.sheet1
-    except Exception as e:
-        return None
-
+# --- CONEXÃO COM O GOOGLE SHEETS VIA LINK ---
 def carregar_dados_sheets():
     colunas_padrao = ["Data", "Integrante", "Pontos", "Observação"]
     try:
-        sheet = conectar_planilha()
-        if sheet is None:
-            return pd.DataFrame(columns=colunas_padrao)
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        # Lê a planilha informada no secrets (ttl=0 garante dados atualizados sem cache)
+        df = conn.read(ttl=0)
         
-        dados = sheet.get_all_records()
-        if not dados:
+        if df is None or df.empty:
             return pd.DataFrame(columns=colunas_padrao)
             
-        df = pd.DataFrame(dados)
-        if not all(col in df.columns for col in colunas_padrao):
-            return pd.DataFrame(columns=colunas_padrao)
-            
+        # Normaliza os nomes das colunas (removendo espaços extras e convertendo para maiúsculas/padrão)
+        df.columns = df.columns.str.strip().str.capitalize()
+        
+        # Garante que as colunas essenciais existam
+        for col in colunas_padrao:
+            if col not in df.columns:
+                df[col] = ""
+
         df["Pontos"] = pd.to_numeric(df["Pontos"], errors="coerce").fillna(0).astype(int)
         df["Observação"] = df["Observação"].fillna("").astype(str)
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.strftime("%d/%m/%Y")
@@ -200,13 +185,26 @@ def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
         else:
             data_str = str(data_obj)
 
-        sheet = conectar_planilha()
-        if sheet is None:
-            st.error("Não foi possível conectar à planilha.")
-            return False
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        
+        # Lê os dados atuais
+        df_atual = conn.read(ttl=0)
+        if df_atual is None:
+            df_atual = pd.DataFrame(columns=["Data", "Integrante", "Pontos", "Observação"])
             
-        # Adiciona a nova linha no final da planilha
-        sheet.append_row([data_str, str(integrante), int(pontos), str(observacao)])
+        df_atual.columns = df_atual.columns.str.strip().str.capitalize()
+
+        # Cria a nova linha como um DataFrame
+        nova_linha = pd.DataFrame([{
+            "Data": data_str,
+            "Integrante": str(integrante),
+            "Pontos": int(pontos),
+            "Observação": str(observacao)
+        }])
+
+        # Concatena a nova linha e atualiza a planilha inteira
+        df_atual = pd.concat([df_atual, nova_linha], ignore_index=True)
+        conn.update(data=df_atual)
         return True
     except Exception as e:
         st.error(f"Erro ao salvar na planilha: {e}")
@@ -214,12 +212,16 @@ def salvar_registro_sheets(data_obj, integrante, pontos, observacao):
 
 def deletar_registro_sheets(idx):
     try:
-        sheet = conectar_planilha()
-        if sheet is None:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        df_atual = conn.read(ttl=0)
+        if df_atual is None or df_atual.empty:
             return False
-        # No gspread, a linha 1 é o cabeçalho, então os dados começam na linha 2 (idx + 2)
-        linha_excel = idx + 2
-        sheet.delete_rows(linha_excel)
+            
+        df_atual.columns = df_atual.columns.str.strip().str.capitalize()
+        
+        # Remove a linha pelo índice da tabela exibida
+        df_atual = df_atual.drop(idx).reset_index(drop=True)
+        conn.update(data=df_atual)
         return True
     except Exception as e:
         st.error(f"Erro ao apagar registo: {e}")
